@@ -268,7 +268,7 @@ interface ArchiveStore {
 }
 
 export const useArchiveStore = create<ArchiveStore>((set, get) => ({
-  viewMode: 'workspace',
+  viewMode: 'public',
   publicTab: 'semua',
   publicSelectedArchiveId: null,
   activePage: 'arsip',

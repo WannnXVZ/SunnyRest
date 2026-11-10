@@ -1,10 +1,18 @@
 import React from 'react';
-import { Sun, Wallet } from 'lucide-react';
+import { Sun, Wallet, Lock } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { truncateIdentifier } from '../lib/hash';
 
 export const AppNavbar: React.FC = () => {
-  const { activePage, setActivePage, wallet, switchNetwork, toggleRole } = useArchiveStore();
+  const {
+    activePage,
+    setActivePage,
+    wallet,
+    switchNetwork,
+    toggleRole,
+    setViewMode,
+    isWorkspaceAuthenticated,
+  } = useArchiveStore();
 
   const navItems: { page: 'arsip' | 'unggah' | 'kurator'; label: string }[] = [
     { page: 'arsip', label: 'Galeri arsip' },
@@ -101,6 +109,18 @@ export const AppNavbar: React.FC = () => {
             <span className="hidden md:inline text-ink-muted text-[11px]">
               {wallet.isCurator ? 'Kurator · akun contoh' : 'Kreator · akun contoh'}
             </span>
+          </button>
+
+          {/* Workspace Kurator Gate Button */}
+          <button
+            type="button"
+            onClick={() => setViewMode(isWorkspaceAuthenticated ? 'workspace' : 'login')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle transition-colors min-h-[36px]"
+            title="Masuk ke Workspace Kurator (Memerlukan Wallet)"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Workspace Kurator</span>
+            <span className="sm:hidden">Workspace</span>
           </button>
         </div>
       </header>
