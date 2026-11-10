@@ -14,11 +14,10 @@ export const AppNavbar: React.FC = () => {
     isWorkspaceAuthenticated,
   } = useArchiveStore();
 
-  const navItems: { page: 'arsip' | 'unggah' | 'verifikasi' | 'kurator'; label: string }[] = [
+  const navItems: { page: 'arsip' | 'unggah' | 'verifikasi'; label: string }[] = [
     { page: 'arsip', label: 'Galeri arsip' },
-    { page: 'unggah', label: 'Unggah foto' },
-    { page: 'verifikasi', label: 'Verifikasi' },
-    { page: 'kurator', label: 'Tinjauan kurator' },
+    { page: 'unggah', label: 'Unggah pengajuan' },
+    { page: 'verifikasi', label: 'Verifikasi terbuka' },
   ];
 
   return (
@@ -115,7 +114,14 @@ export const AppNavbar: React.FC = () => {
           {/* Workspace Kurator Gate Button */}
           <button
             type="button"
-            onClick={() => setViewMode(isWorkspaceAuthenticated ? 'workspace' : 'login')}
+            onClick={() => {
+              if (isWorkspaceAuthenticated) {
+                setViewMode('workspace');
+                setActivePage('ringkasan');
+              } else {
+                setViewMode('login');
+              }
+            }}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle transition-colors min-h-[36px]"
             title="Masuk ke Workspace Kurator (Memerlukan Wallet)"
           >

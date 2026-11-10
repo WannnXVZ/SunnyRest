@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowUpRight, FileText, Info, Lock, Send, ShieldCheck } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { PhotoCategory } from '../types';
@@ -30,6 +30,18 @@ export const CuratorReviewPage: React.FC = () => {
   );
   const [isSigning, setIsSigning] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'warning' | 'danger'; text: string } | null>(null);
+
+  useEffect(() => {
+    if (activeArchive) {
+      setCuratorCategory(activeArchive.finalCategory || 'bangunan');
+      setDecision(activeArchive.status === 'disetujui' ? 'setujui' : 'minta_koreksi');
+      setNotes(
+        activeArchive.curatorNotes ||
+        'Mohon lampirkan bukti izin dari pemegang hak. Pernyataan contoh belum cukup untuk publikasi.'
+      );
+      setFeedbackMsg(null);
+    }
+  }, [activeArchive?.id]);
 
   if (!activeArchive) {
     return (

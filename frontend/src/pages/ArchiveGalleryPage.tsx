@@ -12,8 +12,11 @@ export const ArchiveGalleryPage: React.FC = () => {
     setCategoryFilter,
     setSelectedArchiveId,
     setActivePage,
+    viewMode,
   } = useArchiveStore();
 
+  const isPublicMode = viewMode === 'public';
+  const [statusFilter, setStatusFilter] = useState<'all' | 'menunggu_tinjauan' | 'tercatat' | 'perlu_koreksi' | 'ditolak'>('all');
   const [sortOrder, setSortOrder] = useState<'terbaru' | 'terlama'>('terbaru');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,8 +38,26 @@ export const ArchiveGalleryPage: React.FC = () => {
     { id: 'lanskap', label: 'Lanskap' },
   ];
 
+  const statusOptions = [
+    { id: 'all', label: 'Semua Status' },
+    { id: 'menunggu_tinjauan', label: `Menunggu Tinjauan (${archives.filter((a) => a.status === 'menunggu_tinjauan').length})` },
+    { id: 'tercatat', label: `Tercatat (${archives.filter((a) => a.status === 'tercatat').length})` },
+    { id: 'perlu_koreksi', label: 'Perlu Koreksi' },
+    { id: 'ditolak', label: 'Ditolak' },
+  ];
+
   const filteredArchives = archives
     .filter((item) => {
+      // Di sisi publik: HANYA arsip yang sudah resmi tercatat on-chain yang ditampilkan
+      if (isPublicMode && item.status !== 'tercatat') {
+        return false;
+      }
+
+      // Di sisi workspace: kurator dapat memfilter berdasarkan status antrean
+      if (!isPublicMode && statusFilter !== 'all' && item.status !== statusFilter) {
+        return false;
+      }
+
       const matchesSearch =
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -57,7 +78,12 @@ export const ArchiveGalleryPage: React.FC = () => {
 
   const handleSelectArchive = (id: string) => {
     setSelectedArchiveId(id);
-    setActivePage('detail');
+    const target = archives.find((a) => a.id === id);
+    if (!isPublicMode && (target?.status === 'menunggu_tinjauan' || target?.status === 'perlu_koreksi')) {
+      setActivePage('kurator');
+    } else {
+      setActivePage('detail');
+    }
   };
 
   return (
@@ -66,13 +92,15 @@ export const ArchiveGalleryPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
         <div className="space-y-2">
           <p className="text-[11px] font-mono font-medium tracking-wider text-ink-muted uppercase">
-            KOLEKSI / ARSIP FOTO
+            {isPublicMode ? 'KOLEKSI / ARSIP FOTO PUBLIK' : 'WORKSPACE / MANAJEMEN KOLEKSI ARSIP'}
           </p>
           <h1 className="text-3xl sm:text-4xl font-display font-bold text-ink tracking-tight">
-            Jejak yang tetap hidup.
+            {isPublicMode ? 'Jejak yang tetap hidup.' : 'Koleksi & Status Kurasi Arsip.'}
           </h1>
           <p className="text-sm text-ink-muted font-sans max-w-2xl leading-relaxed">
-            Telusuri foto, kenali sumbernya, dan ikuti setiap versi dalam satu arsip.
+            {isPublicMode
+              ? 'Telusuri foto, kenali sumbernya, dan ikuti setiap versi dalam satu arsip.'
+              : 'Pantau berkas masuk dari kontributor warga, periksa dokumen izin, dan terbitkan token versi ERC-721.'}
           </p>
         </div>
 
@@ -83,9 +111,33 @@ export const ArchiveGalleryPage: React.FC = () => {
           className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle min-h-[42px] transition-colors self-start sm:self-auto"
         >
           <Plus className="w-4 h-4 text-ink" />
-          <span>Unggah foto</span>
+          <span>{isPublicMode ? 'Unggah pengajuan' : 'Unggah arsip institusi'}</span>
         </button>
       </div>
+
+      {/* Status Filter Tabs for Curator Workspace */}
+      {!isPublicMode && (
+        <div className="flex flex-wrap items-center gap-2 p-3 bg-surface border border-border rounded-btn">
+          <span className="text-xs font-mono text-ink-muted mr-1">Status Antrean:</span>
+          {statusOptions.map((st) => {
+            const isActive = statusFilter === st.id;
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setStatusFilter(st.id as 'all' | 'menunggu_tinjauan' | 'tercatat' | 'perlu_koreksi' | 'ditolak')}
+                className={`px-3 py-1.5 rounded-btn text-xs font-mono transition-colors ${
+                  isActive
+                    ? 'bg-forest text-surface font-semibold shadow-subtle'
+                    : 'bg-paper border border-border text-ink hover:border-forest'
+                }`}
+              >
+                {st.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Search and Filters Toolbar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
@@ -145,9 +197,15 @@ export const ArchiveGalleryPage: React.FC = () => {
 
       {/* Subtitle / Counter Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono text-ink-muted pt-1 border-t border-border/80">
-        <span>{filteredArchives.length} arsip contoh</span>
+        <span>
+          {isPublicMode
+            ? `${filteredArchives.length} arsip terverifikasi on-chain`
+            : `${filteredArchives.length} arsip dalam sistem`}
+        </span>
         <span className="text-[11px]">
-          Foto ilustratif, bukan bukti sejarah · Kategori final ditentukan kurator
+          {isPublicMode
+            ? 'Foto ilustratif, bukan bukti sejarah · Kategori final ditentukan kurator'
+            : 'Panel kurator · Menampilkan seluruh status berkas institusi'}
         </span>
       </div>
 
@@ -155,13 +213,16 @@ export const ArchiveGalleryPage: React.FC = () => {
       {filteredArchives.length === 0 ? (
         <div className="bg-surface border border-border rounded-card p-12 text-center space-y-4 shadow-subtle max-w-lg mx-auto my-6">
           <p className="text-sm font-mono text-ink-muted">
-            Tidak ada arsip yang cocok dengan kata kunci pencarian atau filter yang dipilih.
+            {isPublicMode
+              ? 'Tidak ada arsip terverifikasi yang cocok dengan kata kunci pencarian.'
+              : 'Tidak ada arsip yang cocok dengan status atau kata kunci yang dipilih.'}
           </p>
           <button
             type="button"
             onClick={() => {
               setSearchQuery('');
               setCategoryFilter('all');
+              setStatusFilter('all');
             }}
             className="px-4 py-2 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle transition-colors"
           >
@@ -181,7 +242,7 @@ export const ArchiveGalleryPage: React.FC = () => {
                 onClick={() => handleSelectArchive(item.id)}
                 className="group bg-surface border border-border rounded-card overflow-hidden shadow-card hover:shadow-md hover:border-forest/60 transition-all cursor-pointer flex flex-col justify-between"
               >
-                {/* Image Container with Category Badge */}
+                {/* Image Container with Category Badge & Status Badge */}
                 <div className="relative aspect-[4/3] bg-paper overflow-hidden">
                   <img
                     src={originalVer.imageUrl}
@@ -192,6 +253,29 @@ export const ArchiveGalleryPage: React.FC = () => {
                   <span className="absolute top-3 left-3 px-2.5 py-1 rounded-btn bg-surface/95 backdrop-blur-sm border border-border text-[11px] font-mono font-semibold text-ink capitalize shadow-subtle">
                     {item.finalCategory}
                   </span>
+
+                  {/* Status Badge in Workspace Mode */}
+                  {!isPublicMode && (
+                    <span
+                      className={`absolute top-3 right-3 px-2 py-0.5 rounded-btn text-[10px] font-mono font-bold shadow-subtle ${
+                        item.status === 'tercatat'
+                          ? 'bg-sage border border-forest text-forest'
+                          : item.status === 'menunggu_tinjauan'
+                          ? 'bg-gold-light border border-gold-border text-ink'
+                          : item.status === 'perlu_koreksi'
+                          ? 'bg-status-warningBg border border-status-warning text-status-warning'
+                          : 'bg-status-dangerBg border border-status-danger text-status-danger'
+                      }`}
+                    >
+                      {item.status === 'tercatat'
+                        ? 'Tercatat'
+                        : item.status === 'menunggu_tinjauan'
+                        ? 'Menunggu Kurasi'
+                        : item.status === 'perlu_koreksi'
+                        ? 'Perlu Koreksi'
+                        : 'Ditolak'}
+                    </span>
+                  )}
                 </div>
 
                 {/* Card Body */}
@@ -199,7 +283,7 @@ export const ArchiveGalleryPage: React.FC = () => {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-[11px] font-mono text-ink-muted">
                       <span>{item.id} / DEMO</span>
-                      <span>Terdaftar · simulasi</span>
+                      <span>{item.status === 'tercatat' ? 'Terdaftar · simulasi' : 'Antrean kurasi'}</span>
                     </div>
 
                     <h3 className="font-display font-bold text-base text-ink group-hover:text-forest transition-colors line-clamp-1">
@@ -218,7 +302,11 @@ export const ArchiveGalleryPage: React.FC = () => {
 
                   {/* Footer Link Row */}
                   <div className="pt-3 border-t border-border/80 flex items-center justify-between text-xs font-mono text-ink-muted group-hover:text-forest transition-colors">
-                    <span>{versionText}</span>
+                    <span>
+                      {!isPublicMode && (item.status === 'menunggu_tinjauan' || item.status === 'perlu_koreksi')
+                        ? 'Tinjau berkas ini →'
+                        : versionText}
+                    </span>
                     <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                   </div>
                 </div>

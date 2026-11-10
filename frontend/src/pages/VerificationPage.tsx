@@ -5,8 +5,9 @@ import { truncateIdentifier } from '../lib/hash';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
 export const VerificationPage: React.FC = () => {
-  const { archives, selectedArchiveId, setSelectedArchiveId, wallet, connectWallet, publishToBlockchain } =
+  const { archives, selectedArchiveId, setSelectedArchiveId, wallet, connectWallet, publishToBlockchain, viewMode, isWorkspaceAuthenticated } =
     useArchiveStore();
+  const isPublicMode = viewMode === 'public';
 
   const [searchInput, setSearchInput] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
@@ -64,10 +65,12 @@ export const VerificationPage: React.FC = () => {
       {/* Header */}
       <div className="space-y-3">
         <p className="text-xs font-mono font-medium tracking-wider text-ink-muted uppercase">
-          SUNNYREST · ARSIP FOTO BERIZIN
+          {isPublicMode ? 'PORTAL PUBLIK · VERIFIKASI TERBUKA' : 'WORKSPACE · AUDIT ON-CHAIN & NODE'}
         </p>
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-ink leading-tight max-w-4xl">
-          Periksa state kontrak, kepemilikan token, receipt transaksi, metadata IPFS, dan integritas berkas.
+          {isPublicMode
+            ? 'Verifikasi integritas hash SHA-256 berkas dan pencatatan token on-chain.'
+            : 'Periksa state kontrak, kepemilikan token, receipt transaksi, metadata IPFS, dan integritas berkas.'}
         </h1>
       </div>
 
@@ -204,7 +207,7 @@ export const VerificationPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Interactive Publish Trigger if archive not yet recorded */}
+          {/* Interactive Publish Trigger: Only authorized curators in Workspace can mint */}
           {!isRecorded && (
             <div className="pt-4 border-t border-border/80 flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -212,27 +215,33 @@ export const VerificationPage: React.FC = () => {
                   Arsip aktif: {activeArchive?.id} ({activeArchive?.title})
                 </p>
                 <p className="text-xs text-ink-muted">
-                  Status: {activeArchive?.status}. Publikasikan metadata dan cetak token versi ERC-721.
+                  Status: {activeArchive?.status}. {isPublicMode ? 'Verifikasi publik membaca catatan kriptografis terbuka.' : 'Publikasikan metadata dan cetak token versi ERC-721.'}
                 </p>
               </div>
-              <button
-                type="button"
-                disabled={isPublishing}
-                onClick={handlePublish}
-                className="px-5 py-2.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle min-h-[44px] flex items-center gap-2"
-              >
-                {isPublishing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Memproses transaksi di blockchain...</span>
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Publikasikan ke Blockchain</span>
-                  </>
-                )}
-              </button>
+              {!isPublicMode && isWorkspaceAuthenticated ? (
+                <button
+                  type="button"
+                  disabled={isPublishing}
+                  onClick={handlePublish}
+                  className="px-5 py-2.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle min-h-[44px] flex items-center gap-2"
+                >
+                  {isPublishing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Memproses transaksi di blockchain...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Publikasikan ke Blockchain</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <span className="px-3 py-1.5 rounded-btn bg-paper border border-border text-xs font-mono text-ink-muted">
+                  Audit Terbuka · Minting dilakukan melalui Workspace Kurator
+                </span>
+              )}
             </div>
           )}
 

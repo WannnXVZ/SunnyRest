@@ -6,7 +6,8 @@ import { PhotoCategory } from '../types';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
 export const UploadPage: React.FC = () => {
-  const { addArchive, setActivePage, setSelectedArchiveId, archives, wallet } = useArchiveStore();
+  const { addArchive, setActivePage, setSelectedArchiveId, archives, wallet, viewMode } = useArchiveStore();
+  const isPublicMode = viewMode === 'public';
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -146,16 +147,29 @@ export const UploadPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedArchiveId(submittedArchiveId);
-                setActivePage('detail');
-              }}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
-            >
-              Lihat Pratinjau Arsip
-            </button>
+            {!isPublicMode ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedArchiveId(submittedArchiveId);
+                  setActivePage('kurator');
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
+              >
+                Buka Peninjauan Kurator Sekarang
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedArchiveId(submittedArchiveId);
+                  setActivePage('detail');
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
+              >
+                Lihat Pratinjau Arsip
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -188,19 +202,21 @@ export const UploadPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pt-2">
         <div className="space-y-1.5">
           <p className="text-[11px] font-mono font-medium tracking-wider text-ink-muted uppercase">
-            KREATOR / PENGAJUAN BARU
+            {isPublicMode ? 'KONTRIBUTOR / PENGAJUAN ARSIP WARGA' : 'WORKSPACE / AKUISISI ARSIP INSTITUSI'}
           </p>
           <h1 className="text-3xl sm:text-4xl font-display font-bold text-ink tracking-tight">
-            Mulai dari sumber yang jelas.
+            {isPublicMode ? 'Mulai dari sumber yang jelas.' : 'Unggah Koleksi Resmi Institusi.'}
           </h1>
           <p className="text-sm text-ink-muted font-sans max-w-2xl leading-relaxed">
-            Lengkapi berkas dan izin. Kurator meninjau setiap pengajuan sebelum publikasi.
+            {isPublicMode
+              ? 'Lengkapi berkas dan izin. Kurator meninjau setiap pengajuan sebelum publikasi.'
+              : 'Daftarkan berkas arsip bersejarah milik institusi atau mitra untuk masuk ke antrean kurasi dan pencatatan on-chain.'}
           </p>
         </div>
 
         <div className="self-start sm:self-auto">
           <span className="px-3 py-1 rounded-btn bg-paper border border-border text-xs font-mono text-ink-muted">
-            Draf · belum dikirim
+            {isPublicMode ? 'Pengajuan warga · draf' : 'Jalur kurator · draf'}
           </span>
         </div>
       </div>
@@ -532,7 +548,7 @@ export const UploadPage: React.FC = () => {
               disabled={isSubmitting}
               className="w-full py-3 px-4 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-bold shadow-subtle flex items-center justify-center gap-2 min-h-[44px] transition-colors"
             >
-              <span>Kirim ke kurator</span>
+              <span>{isPublicMode ? 'Kirim ke antrean kurator' : 'Daftarkan arsip ke antrean'}</span>
               <ArrowRight className="w-4 h-4 text-ink" />
             </button>
 
