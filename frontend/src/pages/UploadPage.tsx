@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileText, CheckCircle2, Info, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, Info, ArrowRight, Loader2 } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { computeFileSHA256 } from '../lib/hash';
 import { PhotoCategory } from '../types';
@@ -268,7 +268,23 @@ export const UploadPage: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label htmlFor="upload-category" className="text-xs font-mono text-ink-muted">
+                  Kategori foto *
+                </label>
+                <select
+                  id="upload-category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as PhotoCategory)}
+                  className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none transition-colors min-h-[40px] capitalize"
+                >
+                  <option value="bangunan">Bangunan</option>
+                  <option value="lanskap">Lanskap</option>
+                  <option value="orang">Orang</option>
+                </select>
+              </div>
+
               <div className="space-y-1.5">
                 <label htmlFor="upload-license" className="text-xs font-mono text-ink-muted">
                   Lisensi yang diajukan *
@@ -381,85 +397,6 @@ export const UploadPage: React.FC = () => {
             </div>
             <p className="text-xs font-sans text-ink/80 leading-relaxed pl-6">
               Jangan unggah data pribadi, sensitif, atau berkas tanpa izin. Konten yang tersebar di IPFS tidak selalu dapat ditarik kembali.
-            </p>
-          </div>
-
-          {/* Card: Saran Klasifikasi AI */}
-          <div className="bg-surface border border-border rounded-card p-5 space-y-4 shadow-subtle">
-            <div>
-              <h3 className="font-display font-bold text-base text-ink">
-                Saran klasifikasi AI
-              </h3>
-              <p className="text-xs text-ink-muted font-sans mt-0.5">
-                Hasil contoh · bukan keputusan publikasi
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="px-2.5 py-1 rounded-btn bg-gold-light border border-gold-border text-ink text-xs font-mono font-medium capitalize">
-                Saran: {category}
-              </span>
-              <button
-                type="button"
-                onClick={() => setCategory(category === 'bangunan' ? 'lanskap' : category === 'lanskap' ? 'orang' : 'bangunan')}
-                className="text-[11px] font-mono text-ink-muted hover:text-forest flex items-center gap-1"
-                title="Beralih simulasi kelas"
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span>Simulasi</span>
-              </button>
-            </div>
-
-            {/* Confidence Bar Chart */}
-            <div className="space-y-2.5 font-mono text-xs">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className={category === 'bangunan' ? 'font-bold text-ink' : 'text-ink-muted'}>Bangunan</span>
-                  <span className={category === 'bangunan' ? 'font-bold text-ink' : 'text-ink-muted'}>
-                    {category === 'bangunan' ? '94%' : '4%'}
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-paper overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-300 ${category === 'bangunan' ? 'bg-gold' : 'bg-paper-dark'}`}
-                    style={{ width: category === 'bangunan' ? '94%' : '4%' }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className={category === 'lanskap' ? 'font-bold text-ink' : 'text-ink-muted'}>Lanskap</span>
-                  <span className={category === 'lanskap' ? 'font-bold text-ink' : 'text-ink-muted'}>
-                    {category === 'lanskap' ? '91%' : '5%'}
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-paper overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-300 ${category === 'lanskap' ? 'bg-gold' : 'bg-paper-dark'}`}
-                    style={{ width: category === 'lanskap' ? '91%' : '5%' }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className={category === 'orang' ? 'font-bold text-ink' : 'text-ink-muted'}>Orang</span>
-                  <span className={category === 'orang' ? 'font-bold text-ink' : 'text-ink-muted'}>
-                    {category === 'orang' ? '96%' : '1%'}
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-paper overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-300 ${category === 'orang' ? 'bg-gold' : 'bg-paper-dark'}`}
-                    style={{ width: category === 'orang' ? '96%' : '1%' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <p className="text-[11px] font-sans text-ink-muted leading-relaxed pt-2 border-t border-border/80">
-              AI hanya memberi saran tiga kelas. Kategori final dan keputusan tetap pada kurator.
             </p>
           </div>
 
