@@ -218,3 +218,32 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- SunnyRest Project Specific ---
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Node & Hardhat
+node_modules/
+frontend/dist/
+contracts/artifacts/
+contracts/cache/
+contracts/coverage/
+coverage.json
+.vite/
+
+# Large datasets & model binaries (keep manifests & small samples only)
+data/raw/
+data/processed/
+backend/models/*.pt
+backend/models/*.pth
+backend/models/*.h5
+backend/models/*.onnx
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
