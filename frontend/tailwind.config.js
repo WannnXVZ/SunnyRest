@@ -33,6 +33,13 @@ export default {
           border: '#D9C195',
           text: '#7A5B27',
         },
+        gold: {
+          DEFAULT: '#E5B842',
+          hover: '#D4A732',
+          light: '#FEF9E7',
+          border: '#DFC168',
+          text: '#202522',
+        },
         border: {
           DEFAULT: '#E7E7E0',
           dark: '#D5D5CC',
