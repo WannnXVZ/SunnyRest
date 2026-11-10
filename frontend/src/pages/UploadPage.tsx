@@ -28,6 +28,7 @@ export const UploadPage: React.FC = () => {
   const [hasConsent, setHasConsent] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedArchiveId, setSubmittedArchiveId] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,13 +98,89 @@ export const UploadPage: React.FC = () => {
     );
 
     setSelectedArchiveId(newId);
-    setActivePage('kurator');
+    setSubmittedArchiveId(newId);
     setIsSubmitting(false);
   };
 
   const recipientWallet = wallet.address
     ? `${wallet.address.slice(0, 4)}...${wallet.address.slice(-4)} · wallet kreator (contoh)`
     : '0x7A...91C2 · wallet kreator (contoh)';
+
+  if (submittedArchiveId) {
+    return (
+      <div className="max-w-2xl mx-auto py-8 space-y-6">
+        <div className="bg-surface border border-border rounded-card p-8 shadow-card text-center space-y-6">
+          <div className="w-14 h-14 rounded-full bg-sage flex items-center justify-center text-forest mx-auto">
+            <CheckCircle2 className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="px-2.5 py-1 rounded-btn bg-gold-light border border-gold-border text-ink text-xs font-mono font-medium">
+              Pengajuan Berhasil Didaftarkan
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-ink">
+              Berkas Anda Masuk Antrean Kurasi
+            </h1>
+            <p className="text-xs sm:text-sm text-ink-muted font-sans max-w-lg mx-auto leading-relaxed">
+              ID Arsip Anda adalah <span className="font-mono font-bold text-ink">{submittedArchiveId}</span>. Kurator berwenang akan memvalidasi bukti izin hak cipta, kelayakan arsip, serta menetapkan kategori final sebelum diterbitkan ke smart contract ERC-721.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-btn bg-paper/70 border border-border text-xs font-mono text-left space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-ink-muted">Judul Arsip:</span>
+              <span className="font-bold text-ink">{title}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-ink-muted">Kategori Diajukan:</span>
+              <span className="capitalize text-ink">{category}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-ink-muted">Status Pengajuan:</span>
+              <span className="text-status-warning font-semibold">Menunggu Tinjauan Kurator</span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pt-1 border-t border-border/80">
+              <span className="text-ink-muted">Hash SHA-256:</span>
+              <span className="text-[11px] select-all break-all text-ink">{fileHash || '9f2a8c7b4d1e...'}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedArchiveId(submittedArchiveId);
+                setActivePage('detail');
+              }}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
+            >
+              Lihat Pratinjau Arsip
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSubmittedArchiveId(null);
+                setSelectedFile(null);
+                setPreviewUrl(null);
+                setFileHash('');
+              }}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-surface hover:bg-paper border border-border text-xs font-semibold text-ink transition-colors min-h-[42px]"
+            >
+              Unggah Foto Lain
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivePage('arsip')}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-paper hover:bg-paper/80 border border-border text-xs font-mono text-ink-muted transition-colors min-h-[42px]"
+            >
+              Kembali ke Galeri
+            </button>
+          </div>
+        </div>
+        <FooterDisclaimer />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">

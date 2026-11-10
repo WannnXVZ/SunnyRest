@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Download, Sparkles, CheckCircle2, RotateCw, ArrowRight, ArrowUpRight, Info } from 'lucide-react';
+import { ArrowLeft, Download, Sparkles, CheckCircle2, RotateCw, ArrowRight, ArrowUpRight, Info, Loader2, X, Shield } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { truncateIdentifier } from '../lib/hash';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
@@ -9,6 +9,9 @@ export const ArchiveDetailPage: React.FC = () => {
 
   const archive = archives.find((a) => a.id === selectedArchiveId) || archives[0];
   const [isVerifying, setIsVerifying] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoredSuccessMsg, setRestoredSuccessMsg] = useState<string | null>(null);
 
   if (!archive) {
     return (
@@ -28,9 +31,21 @@ export const ArchiveDetailPage: React.FC = () => {
   const originalVersion = archive.versions.find((v) => v.versionType === 'original') || archive.versions[0];
   const derivativeVersion = archive.versions.find((v) => v.versionType === 'derivative');
 
-  const handleCreateRestoration = async () => {
-    if (!derivativeVersion) {
-      await runSuperResolutionForArchive(archive.id);
+  const handleCreateRestoration = () => {
+    if (derivativeVersion) {
+      setRestoredSuccessMsg('Versi restorasi x2 sudah aktif dan dapat dibandingkan berdampingan.');
+      return;
+    }
+    setShowRestoreModal(true);
+  };
+
+  const handleConfirmPaidRestore = async () => {
+    setIsRestoring(true);
+    const res = await runSuperResolutionForArchive(archive.id);
+    setIsRestoring(false);
+    setShowRestoreModal(false);
+    if (res.success) {
+      setRestoredSuccessMsg('Restorasi AI Super-Resolution x4 berhasil! Biaya 0.01 ETH telah diverifikasi on-chain.');
     }
   };
 
@@ -86,10 +101,26 @@ export const ArchiveDetailPage: React.FC = () => {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle min-h-[38px] transition-colors"
           >
             <Sparkles className="w-3.5 h-3.5 text-ink" />
-            <span>Buat restorasi x2</span>
+            <span>{derivativeVersion ? 'Restorasi x2 Aktif' : 'Buat restorasi x2 (0.01 ETH)'}</span>
           </button>
         </div>
       </div>
+
+      {restoredSuccessMsg && (
+        <div className="p-3.5 rounded-btn bg-sage border border-sage-border text-forest text-xs font-sans flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            <span>{restoredSuccessMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRestoredSuccessMsg(null)}
+            className="text-forest hover:text-forest-hover"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Side-by-Side Image Comparison Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -377,6 +408,92 @@ export const ArchiveDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 0.01 ETH Paid AI Restoration Modal */}
+      {showRestoreModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-card p-6 sm:p-8 max-w-lg w-full shadow-card space-y-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-gold-light border border-gold-border flex items-center justify-center text-ink">
+                  <Sparkles className="w-5 h-5 text-ink" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-lg text-ink">
+                    Layanan Restorasi AI (Super-Resolution x4)
+                  </h3>
+                  <p className="text-xs text-ink-muted font-sans">
+                    Arsip: {archive.id} · {archive.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRestoreModal(false)}
+                className="p-1 rounded-btn text-ink-muted hover:text-ink hover:bg-paper"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-btn bg-paper/80 border border-border space-y-2 text-xs font-mono">
+              <div className="flex items-center justify-between">
+                <span className="text-ink-muted">Model Pralatih:</span>
+                <span className="text-ink font-semibold">Real-ESRGAN x4 / PyTorch</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-ink-muted">Resolusi Target:</span>
+                <span className="text-ink font-semibold">3.200 × 2.400 px</span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-border/80">
+                <span className="text-ink-muted">Biaya Layanan On-Chain:</span>
+                <span className="px-2 py-0.5 rounded bg-gold text-ink font-bold font-mono">
+                  0.01 ETH
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-btn bg-gold-light/60 border border-gold-border text-xs text-ink/90 font-sans space-y-1">
+              <p className="font-semibold flex items-center gap-1.5 text-ink">
+                <Shield className="w-3.5 h-3.5" />
+                <span>Pencatatan Versi ERC-721</span>
+              </p>
+              <p className="leading-relaxed text-[11px]">
+                Hasil restorasi akan didaftarkan sebagai token turunan (derivative) dengan parentId = {originalVersion.onChainTokenId || '104'}. Berkas asli tetap utuh dan tersimpan secara independen.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isRestoring}
+                onClick={() => setShowRestoreModal(false)}
+                className="px-4 py-2.5 rounded-btn bg-surface hover:bg-paper border border-border text-xs font-semibold text-ink transition-colors min-h-[40px]"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isRestoring}
+                onClick={handleConfirmPaidRestore}
+                className="px-5 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-bold shadow-subtle flex items-center gap-2 transition-colors min-h-[40px]"
+              >
+                {isRestoring ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Memproses Transaksi 0.01 ETH...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Bayar 0.01 ETH & Restorasi</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <FooterDisclaimer />
     </div>

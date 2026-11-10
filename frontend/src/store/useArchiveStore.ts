@@ -5,6 +5,38 @@ import { NETWORKS, DEFAULT_CHAIN_ID } from '../config/networks';
 // Photographic collection strictly matching the 4 reference designs
 const INITIAL_ARCHIVES: ArchiveItem[] = [
   {
+    id: 'SR-0105',
+    title: 'Balai Kota Lama Samarinda',
+    creator: 'Donasi Komunitas Sejarah',
+    source: 'Dokumentasi kota tua 1978',
+    licenseInfo: 'CC BY 4.0 (contoh)',
+    initialCategory: 'bangunan',
+    finalCategory: 'bangunan',
+    status: 'menunggu_tinjauan',
+    aiPrediction: {
+      category: 'bangunan',
+      confidence: 0.95,
+      advisoryNote: 'Saran AI: Bangunan (95%). Menunggu penetapan dan tanda tangan kurator.',
+    },
+    curatorNotes: 'Foto fasad gedung balai kota lama. Menunggu verifikasi lampiran izin hak cipta.',
+    originalHash: '4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a',
+    originalCid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
+    createdAt: '05 Nov 2026',
+    updatedAt: '05 Nov 2026',
+    versions: [
+      {
+        versionNumber: 1,
+        versionType: 'original',
+        label: 'Asli / Token Draf',
+        parentId: null,
+        ipfsCid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
+        fileHash: '4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a',
+        timestamp: '05 Nov 2026, 11.00',
+        imageUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=1200&q=80',
+      },
+    ],
+  },
+  {
     id: 'SR-0104',
     title: 'Stasiun di ujung kota',
     creator: 'Kreator demo SunnyRest',
@@ -257,7 +289,7 @@ interface ArchiveStore {
     imageUrl?: string;
   }) => Promise<{ success: boolean; txHash: string; archiveId: string }>;
   updateArchiveStatus: (id: string, status: ArchiveStatus, finalCategory?: PhotoCategory, notes?: string) => void;
-  runSuperResolutionForArchive: (id: string) => Promise<void>;
+  runSuperResolutionForArchive: (id: string) => Promise<{ success: boolean; alreadyExists?: boolean; newVersion?: ArchiveVersion }>;
   publishToBlockchain: (archiveId: string) => Promise<{ success: boolean; txHash?: string; tokenId?: number }>;
 
   // Wallet
@@ -456,23 +488,28 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
 
   runSuperResolutionForArchive: async (id: string) => {
     const archive = get().archives.find((a) => a.id === id);
-    if (!archive) return;
+    if (!archive) return { success: false };
 
     // Check if derivative version already exists
     const hasDerivative = archive.versions.some((v) => v.versionType === 'derivative');
-    if (hasDerivative) return;
+    if (hasDerivative) return { success: false, alreadyExists: true };
+
+    // Simulate smart contract 0.01 ETH transaction & inference delay
+    await new Promise((r) => setTimeout(r, 1200));
 
     // Add derivative version
     const newVersion: ArchiveVersion = {
       versionNumber: archive.versions.length + 1,
       versionType: 'derivative',
-      label: 'Hasil restorasi AI · derivative',
-      parentId: `${archive.id}-V1`,
+      label: 'Restorasi x2 / Token #105',
+      parentId: archive.id,
       ipfsCid: `bafybei${Math.random().toString(36).substring(2, 15)}enhanced`,
       fileHash: `${Math.random().toString(16).substring(2, 10)}${archive.originalHash.slice(8)}`,
-      timestamp: '10 Nov 2026 15:45',
-      methodLabel: 'Super-Resolution (Model Pralatih x4)',
+      timestamp: '10 Nov 2026, 15.45',
+      methodLabel: 'Super-Resolution x4 (Biaya 0.01 ETH)',
       imageUrl: archive.versions[0]?.imageUrl || '',
+      onChainTokenId: 105,
+      transactionHash: '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
     };
 
     set((state) => ({
@@ -486,6 +523,8 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
           : item
       ),
     }));
+
+    return { success: true, newVersion };
   },
 
   publishToBlockchain: async (archiveId: string) => {

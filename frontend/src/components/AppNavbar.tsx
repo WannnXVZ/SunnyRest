@@ -14,9 +14,10 @@ export const AppNavbar: React.FC = () => {
     isWorkspaceAuthenticated,
   } = useArchiveStore();
 
-  const navItems: { page: 'arsip' | 'unggah' | 'kurator'; label: string }[] = [
+  const navItems: { page: 'arsip' | 'unggah' | 'verifikasi' | 'kurator'; label: string }[] = [
     { page: 'arsip', label: 'Galeri arsip' },
     { page: 'unggah', label: 'Unggah foto' },
+    { page: 'verifikasi', label: 'Verifikasi' },
     { page: 'kurator', label: 'Tinjauan kurator' },
   ];
 

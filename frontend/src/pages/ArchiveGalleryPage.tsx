@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Search, Plus, BookOpen, ArrowUpRight } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
@@ -15,6 +15,18 @@ export const ArchiveGalleryPage: React.FC = () => {
   } = useArchiveStore();
 
   const [sortOrder, setSortOrder] = useState<'terbaru' | 'terlama'>('terbaru');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const categories = [
     { id: 'all', label: 'Semua' },
@@ -81,6 +93,7 @@ export const ArchiveGalleryPage: React.FC = () => {
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-3 pointer-events-none" />
           <input
+            ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -138,64 +151,82 @@ export const ArchiveGalleryPage: React.FC = () => {
         </span>
       </div>
 
-      {/* 3-Column Card Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredArchives.map((item) => {
-          const originalVer = item.versions.find((v) => v.versionType === 'original') || item.versions[0];
-          const hasDerivative = item.versions.some((v) => v.versionType === 'derivative');
-          const versionText = hasDerivative ? 'Asli + restorasi x2' : 'Versi asli';
+      {/* 3-Column Card Grid or Empty State */}
+      {filteredArchives.length === 0 ? (
+        <div className="bg-surface border border-border rounded-card p-12 text-center space-y-4 shadow-subtle max-w-lg mx-auto my-6">
+          <p className="text-sm font-mono text-ink-muted">
+            Tidak ada arsip yang cocok dengan kata kunci pencarian atau filter yang dipilih.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setCategoryFilter('all');
+            }}
+            className="px-4 py-2 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle transition-colors"
+          >
+            Reset Pencarian & Filter
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredArchives.map((item) => {
+            const originalVer = item.versions.find((v) => v.versionType === 'original') || item.versions[0];
+            const hasDerivative = item.versions.some((v) => v.versionType === 'derivative');
+            const versionText = hasDerivative ? 'Asli + restorasi x2' : 'Versi asli';
 
-          return (
-            <div
-              key={item.id}
-              onClick={() => handleSelectArchive(item.id)}
-              className="group bg-surface border border-border rounded-card overflow-hidden shadow-card hover:shadow-md hover:border-forest/60 transition-all cursor-pointer flex flex-col justify-between"
-            >
-              {/* Image Container with Category Badge */}
-              <div className="relative aspect-[4/3] bg-paper overflow-hidden">
-                <img
-                  src={originalVer.imageUrl}
-                  alt={item.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover grayscale contrast-110 group-hover:scale-105 transition-transform duration-300"
-                />
-                <span className="absolute top-3 left-3 px-2.5 py-1 rounded-btn bg-surface/95 backdrop-blur-sm border border-border text-[11px] font-mono font-semibold text-ink capitalize shadow-subtle">
-                  {item.finalCategory}
-                </span>
-              </div>
-
-              {/* Card Body */}
-              <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] font-mono text-ink-muted">
-                    <span>{item.id} / DEMO</span>
-                    <span>Terdaftar · simulasi</span>
-                  </div>
-
-                  <h3 className="font-display font-bold text-base text-ink group-hover:text-forest transition-colors line-clamp-1">
-                    {item.title}
-                  </h3>
-
-                  <div className="flex items-center gap-1.5 text-xs text-ink-muted font-sans line-clamp-1">
-                    <BookOpen className="w-3.5 h-3.5 flex-shrink-0 text-ink-muted" />
-                    <span>{item.source}</span>
-                  </div>
-
-                  <p className="text-[11px] font-mono text-ink-muted">
-                    Izin contoh · belum diverifikasi
-                  </p>
+            return (
+              <div
+                key={item.id}
+                onClick={() => handleSelectArchive(item.id)}
+                className="group bg-surface border border-border rounded-card overflow-hidden shadow-card hover:shadow-md hover:border-forest/60 transition-all cursor-pointer flex flex-col justify-between"
+              >
+                {/* Image Container with Category Badge */}
+                <div className="relative aspect-[4/3] bg-paper overflow-hidden">
+                  <img
+                    src={originalVer.imageUrl}
+                    alt={item.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover grayscale contrast-110 group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-btn bg-surface/95 backdrop-blur-sm border border-border text-[11px] font-mono font-semibold text-ink capitalize shadow-subtle">
+                    {item.finalCategory}
+                  </span>
                 </div>
 
-                {/* Footer Link Row */}
-                <div className="pt-3 border-t border-border/80 flex items-center justify-between text-xs font-mono text-ink-muted group-hover:text-forest transition-colors">
-                  <span>{versionText}</span>
-                  <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                {/* Card Body */}
+                <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-mono text-ink-muted">
+                      <span>{item.id} / DEMO</span>
+                      <span>Terdaftar · simulasi</span>
+                    </div>
+
+                    <h3 className="font-display font-bold text-base text-ink group-hover:text-forest transition-colors line-clamp-1">
+                      {item.title}
+                    </h3>
+
+                    <div className="flex items-center gap-1.5 text-xs text-ink-muted font-sans line-clamp-1">
+                      <BookOpen className="w-3.5 h-3.5 flex-shrink-0 text-ink-muted" />
+                      <span>{item.source}</span>
+                    </div>
+
+                    <p className="text-[11px] font-mono text-ink-muted">
+                      Izin contoh · belum diverifikasi
+                    </p>
+                  </div>
+
+                  {/* Footer Link Row */}
+                  <div className="pt-3 border-t border-border/80 flex items-center justify-between text-xs font-mono text-ink-muted group-hover:text-forest transition-colors">
+                    <span>{versionText}</span>
+                    <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Pagination Bar */}
       <div className="pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs font-mono text-ink-muted">

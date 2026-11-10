@@ -5,7 +5,15 @@ import { PhotoCategory } from '../types';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
 export const CuratorReviewPage: React.FC = () => {
-  const { archives, selectedArchiveId, updateArchiveStatus, setActivePage, publishToBlockchain, wallet } = useArchiveStore();
+  const {
+    archives,
+    selectedArchiveId,
+    setSelectedArchiveId,
+    updateArchiveStatus,
+    setActivePage,
+    publishToBlockchain,
+    wallet,
+  } = useArchiveStore();
 
   const pendingArchives = archives.filter((a) => a.status === 'menunggu_tinjauan' || a.status === 'perlu_koreksi');
   const activeArchive =
@@ -118,6 +126,41 @@ export const CuratorReviewPage: React.FC = () => {
           Kreator {wallet.address ? `${wallet.address.slice(0, 4)}...${wallet.address.slice(-4)}` : '0x7A...91C2'} · Lokal
         </span>
       </div>
+
+      {/* Queue Selection Bar */}
+      {pendingArchives.length > 0 && (
+        <div className="bg-surface border border-border rounded-btn p-3 shadow-subtle space-y-2">
+          <div className="flex items-center justify-between text-xs font-mono">
+            <span className="font-semibold text-ink">Antrean Pengajuan Menunggu ({pendingArchives.length} item):</span>
+            <span className="text-ink-muted text-[11px]">Pilih untuk meninjau berkas</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {pendingArchives.map((item) => {
+              const isSelected = item.id === activeArchive.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedArchiveId(item.id);
+                    setCuratorCategory(item.finalCategory);
+                    setNotes(item.curatorNotes || '');
+                    setFeedbackMsg(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-btn text-xs font-mono transition-colors flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-gold text-ink font-bold shadow-subtle border border-gold-border'
+                      : 'bg-paper hover:bg-paper-dark border border-border text-ink-muted'
+                  }`}
+                >
+                  <span>{item.id}</span>
+                  <span className="text-[10px] capitalize">({item.finalCategory})</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {feedbackMsg && (
         <div
