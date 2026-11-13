@@ -2,7 +2,7 @@
 
 Prototipe DApp arsip foto berizin dengan klasifikasi adegan berbantuan AI (orang, bangunan, lanskap), peningkatan resolusi (super-resolution), peninjauan kurator, penyimpanan off-chain IPFS, dan pencatatan versi sumber-turunan berbasis ERC-721.
 
-## Anggota Kelompok (Cinta Segitiga 5A)
+## Anggota Kelompok
 
 - **Hanafi Purnama Yudi** (246651029): Koordinator, AI & Data
 - **Haikal Alie Rhanditya** (246651007): Smart Contract & Blockchain
