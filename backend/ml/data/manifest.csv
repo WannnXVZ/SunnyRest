@@ -1,0 +1,346 @@
+path,label,source,license,group,split
+raw/intel_image/seg_train/buildings/intel_bld_0000.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_00,train
+raw/intel_image/seg_train/buildings/intel_bld_0001.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_00,train
+raw/intel_image/seg_train/buildings/intel_bld_0002.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_00,train
+raw/intel_image/seg_train/buildings/intel_bld_0003.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_00,train
+raw/intel_image/seg_train/buildings/intel_bld_0004.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_00,train
+raw/intel_image/seg_train/buildings/intel_bld_0005.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_01,train
+raw/intel_image/seg_train/buildings/intel_bld_0006.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_01,train
+raw/intel_image/seg_train/buildings/intel_bld_0007.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_01,train
+raw/intel_image/seg_train/buildings/intel_bld_0008.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_01,train
+raw/intel_image/seg_train/buildings/intel_bld_0009.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_01,train
+raw/intel_image/seg_train/buildings/intel_bld_0010.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_02,test
+raw/intel_image/seg_train/buildings/intel_bld_0011.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_02,test
+raw/intel_image/seg_train/buildings/intel_bld_0012.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_02,test
+raw/intel_image/seg_train/buildings/intel_bld_0013.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_02,test
+raw/intel_image/seg_train/buildings/intel_bld_0014.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_02,test
+raw/intel_image/seg_train/buildings/intel_bld_0015.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_03,train
+raw/intel_image/seg_train/buildings/intel_bld_0016.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_03,train
+raw/intel_image/seg_train/buildings/intel_bld_0017.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_03,train
+raw/intel_image/seg_train/buildings/intel_bld_0018.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_03,train
+raw/intel_image/seg_train/buildings/intel_bld_0019.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_03,train
+raw/intel_image/seg_train/buildings/intel_bld_0020.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_04,train
+raw/intel_image/seg_train/buildings/intel_bld_0021.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_04,train
+raw/intel_image/seg_train/buildings/intel_bld_0022.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_04,train
+raw/intel_image/seg_train/buildings/intel_bld_0023.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_04,train
+raw/intel_image/seg_train/buildings/intel_bld_0024.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_04,train
+raw/intel_image/seg_train/buildings/intel_bld_0025.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_05,val
+raw/intel_image/seg_train/buildings/intel_bld_0026.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_05,val
+raw/intel_image/seg_train/buildings/intel_bld_0027.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_05,val
+raw/intel_image/seg_train/buildings/intel_bld_0028.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_05,val
+raw/intel_image/seg_train/buildings/intel_bld_0029.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_05,val
+raw/intel_image/seg_train/buildings/intel_bld_0030.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_06,train
+raw/intel_image/seg_train/buildings/intel_bld_0031.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_06,train
+raw/intel_image/seg_train/buildings/intel_bld_0032.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_06,train
+raw/intel_image/seg_train/buildings/intel_bld_0033.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_06,train
+raw/intel_image/seg_train/buildings/intel_bld_0034.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_06,train
+raw/intel_image/seg_train/buildings/intel_bld_0035.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_07,train
+raw/intel_image/seg_train/buildings/intel_bld_0036.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_07,train
+raw/intel_image/seg_train/buildings/intel_bld_0037.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_07,train
+raw/intel_image/seg_train/buildings/intel_bld_0038.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_07,train
+raw/intel_image/seg_train/buildings/intel_bld_0039.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_07,train
+raw/intel_image/seg_train/buildings/intel_bld_0040.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_08,train
+raw/intel_image/seg_train/buildings/intel_bld_0041.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_08,train
+raw/intel_image/seg_train/buildings/intel_bld_0042.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_08,train
+raw/intel_image/seg_train/buildings/intel_bld_0043.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_08,train
+raw/intel_image/seg_train/buildings/intel_bld_0044.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_08,train
+raw/intel_image/seg_train/buildings/intel_bld_0045.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_09,test
+raw/intel_image/seg_train/buildings/intel_bld_0046.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_09,test
+raw/intel_image/seg_train/buildings/intel_bld_0047.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_09,test
+raw/intel_image/seg_train/buildings/intel_bld_0048.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_09,test
+raw/intel_image/seg_train/buildings/intel_bld_0049.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_09,test
+raw/intel_image/seg_train/buildings/intel_bld_0050.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_10,train
+raw/intel_image/seg_train/buildings/intel_bld_0051.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_10,train
+raw/intel_image/seg_train/buildings/intel_bld_0052.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_10,train
+raw/intel_image/seg_train/buildings/intel_bld_0053.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_10,train
+raw/intel_image/seg_train/buildings/intel_bld_0054.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_10,train
+raw/intel_image/seg_train/buildings/intel_bld_0055.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_11,train
+raw/intel_image/seg_train/buildings/intel_bld_0056.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_11,train
+raw/intel_image/seg_train/buildings/intel_bld_0057.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_11,train
+raw/intel_image/seg_train/buildings/intel_bld_0058.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_11,train
+raw/intel_image/seg_train/buildings/intel_bld_0059.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_11,train
+raw/intel_image/seg_train/buildings/intel_bld_0060.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_12,train
+raw/intel_image/seg_train/buildings/intel_bld_0061.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_12,train
+raw/intel_image/seg_train/buildings/intel_bld_0062.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_12,train
+raw/intel_image/seg_train/buildings/intel_bld_0063.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_12,train
+raw/intel_image/seg_train/buildings/intel_bld_0064.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_12,train
+raw/intel_image/seg_train/buildings/intel_bld_0065.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_13,train
+raw/intel_image/seg_train/buildings/intel_bld_0066.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_13,train
+raw/intel_image/seg_train/buildings/intel_bld_0067.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_13,train
+raw/intel_image/seg_train/buildings/intel_bld_0068.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_13,train
+raw/intel_image/seg_train/buildings/intel_bld_0069.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_13,train
+raw/intel_image/seg_train/buildings/intel_bld_0070.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_14,test
+raw/intel_image/seg_train/buildings/intel_bld_0071.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_14,test
+raw/intel_image/seg_train/buildings/intel_bld_0072.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_14,test
+raw/intel_image/seg_train/buildings/intel_bld_0073.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_14,test
+raw/intel_image/seg_train/buildings/intel_bld_0074.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_14,test
+raw/intel_image/seg_train/buildings/intel_bld_0075.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_15,train
+raw/intel_image/seg_train/buildings/intel_bld_0076.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_15,train
+raw/intel_image/seg_train/buildings/intel_bld_0077.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_15,train
+raw/intel_image/seg_train/buildings/intel_bld_0078.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_15,train
+raw/intel_image/seg_train/buildings/intel_bld_0079.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_15,train
+raw/intel_image/seg_train/buildings/intel_bld_0080.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_16,train
+raw/intel_image/seg_train/buildings/intel_bld_0081.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_16,train
+raw/intel_image/seg_train/buildings/intel_bld_0082.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_16,train
+raw/intel_image/seg_train/buildings/intel_bld_0083.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_16,train
+raw/intel_image/seg_train/buildings/intel_bld_0084.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_16,train
+raw/intel_image/seg_train/buildings/intel_bld_0085.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_17,train
+raw/intel_image/seg_train/buildings/intel_bld_0086.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_17,train
+raw/intel_image/seg_train/buildings/intel_bld_0087.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_17,train
+raw/intel_image/seg_train/buildings/intel_bld_0088.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_17,train
+raw/intel_image/seg_train/buildings/intel_bld_0089.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_17,train
+raw/intel_image/seg_train/buildings/intel_bld_0090.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_18,train
+raw/intel_image/seg_train/buildings/intel_bld_0091.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_18,train
+raw/intel_image/seg_train/buildings/intel_bld_0092.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_18,train
+raw/intel_image/seg_train/buildings/intel_bld_0093.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_18,train
+raw/intel_image/seg_train/buildings/intel_bld_0094.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_18,train
+raw/intel_image/seg_train/buildings/intel_bld_0095.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_19,test
+raw/intel_image/seg_train/buildings/intel_bld_0096.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_19,test
+raw/intel_image/seg_train/buildings/intel_bld_0097.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_19,test
+raw/intel_image/seg_train/buildings/intel_bld_0098.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_19,test
+raw/intel_image/seg_train/buildings/intel_bld_0099.jpg,bangunan,intel_image,CC0 / Kaggle Open Data,intel_buildings_19,test
+raw/intel_image/seg_train/landscape/intel_lnd_0000.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_00,train
+raw/intel_image/seg_train/landscape/intel_lnd_0001.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_00,train
+raw/intel_image/seg_train/landscape/intel_lnd_0002.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_00,train
+raw/intel_image/seg_train/landscape/intel_lnd_0003.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_00,train
+raw/intel_image/seg_train/landscape/intel_lnd_0004.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_00,train
+raw/intel_image/seg_train/landscape/intel_lnd_0005.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_01,train
+raw/intel_image/seg_train/landscape/intel_lnd_0006.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_01,train
+raw/intel_image/seg_train/landscape/intel_lnd_0007.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_01,train
+raw/intel_image/seg_train/landscape/intel_lnd_0008.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_01,train
+raw/intel_image/seg_train/landscape/intel_lnd_0009.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_01,train
+raw/intel_image/seg_train/landscape/intel_lnd_0010.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_02,train
+raw/intel_image/seg_train/landscape/intel_lnd_0011.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_02,train
+raw/intel_image/seg_train/landscape/intel_lnd_0012.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_02,train
+raw/intel_image/seg_train/landscape/intel_lnd_0013.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_02,train
+raw/intel_image/seg_train/landscape/intel_lnd_0014.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_02,train
+raw/intel_image/seg_train/landscape/intel_lnd_0015.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_03,train
+raw/intel_image/seg_train/landscape/intel_lnd_0016.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_03,train
+raw/intel_image/seg_train/landscape/intel_lnd_0017.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_03,train
+raw/intel_image/seg_train/landscape/intel_lnd_0018.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_03,train
+raw/intel_image/seg_train/landscape/intel_lnd_0019.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_03,train
+raw/intel_image/seg_train/landscape/intel_lnd_0020.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_04,train
+raw/intel_image/seg_train/landscape/intel_lnd_0021.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_04,train
+raw/intel_image/seg_train/landscape/intel_lnd_0022.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_04,train
+raw/intel_image/seg_train/landscape/intel_lnd_0023.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_04,train
+raw/intel_image/seg_train/landscape/intel_lnd_0024.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_04,train
+raw/intel_image/seg_train/landscape/intel_lnd_0025.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_05,train
+raw/intel_image/seg_train/landscape/intel_lnd_0026.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_05,train
+raw/intel_image/seg_train/landscape/intel_lnd_0027.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_05,train
+raw/intel_image/seg_train/landscape/intel_lnd_0028.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_05,train
+raw/intel_image/seg_train/landscape/intel_lnd_0029.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_05,train
+raw/intel_image/seg_train/landscape/intel_lnd_0030.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_06,val
+raw/intel_image/seg_train/landscape/intel_lnd_0031.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_06,val
+raw/intel_image/seg_train/landscape/intel_lnd_0032.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_06,val
+raw/intel_image/seg_train/landscape/intel_lnd_0033.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_06,val
+raw/intel_image/seg_train/landscape/intel_lnd_0034.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_06,val
+raw/intel_image/seg_train/landscape/intel_lnd_0035.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_07,train
+raw/intel_image/seg_train/landscape/intel_lnd_0036.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_07,train
+raw/intel_image/seg_train/landscape/intel_lnd_0037.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_07,train
+raw/intel_image/seg_train/landscape/intel_lnd_0038.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_07,train
+raw/intel_image/seg_train/landscape/intel_lnd_0039.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_07,train
+raw/intel_image/seg_train/landscape/intel_lnd_0040.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_08,train
+raw/intel_image/seg_train/landscape/intel_lnd_0041.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_08,train
+raw/intel_image/seg_train/landscape/intel_lnd_0042.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_08,train
+raw/intel_image/seg_train/landscape/intel_lnd_0043.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_08,train
+raw/intel_image/seg_train/landscape/intel_lnd_0044.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_08,train
+raw/intel_image/seg_train/landscape/intel_lnd_0045.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_09,val
+raw/intel_image/seg_train/landscape/intel_lnd_0046.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_09,val
+raw/intel_image/seg_train/landscape/intel_lnd_0047.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_09,val
+raw/intel_image/seg_train/landscape/intel_lnd_0048.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_09,val
+raw/intel_image/seg_train/landscape/intel_lnd_0049.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_09,val
+raw/intel_image/seg_train/landscape/intel_lnd_0050.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_10,test
+raw/intel_image/seg_train/landscape/intel_lnd_0051.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_10,test
+raw/intel_image/seg_train/landscape/intel_lnd_0052.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_10,test
+raw/intel_image/seg_train/landscape/intel_lnd_0053.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_10,test
+raw/intel_image/seg_train/landscape/intel_lnd_0054.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_10,test
+raw/intel_image/seg_train/landscape/intel_lnd_0055.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_11,train
+raw/intel_image/seg_train/landscape/intel_lnd_0056.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_11,train
+raw/intel_image/seg_train/landscape/intel_lnd_0057.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_11,train
+raw/intel_image/seg_train/landscape/intel_lnd_0058.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_11,train
+raw/intel_image/seg_train/landscape/intel_lnd_0059.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_11,train
+raw/intel_image/seg_train/landscape/intel_lnd_0060.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_12,train
+raw/intel_image/seg_train/landscape/intel_lnd_0061.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_12,train
+raw/intel_image/seg_train/landscape/intel_lnd_0062.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_12,train
+raw/intel_image/seg_train/landscape/intel_lnd_0063.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_12,train
+raw/intel_image/seg_train/landscape/intel_lnd_0064.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_12,train
+raw/intel_image/seg_train/landscape/intel_lnd_0065.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_13,train
+raw/intel_image/seg_train/landscape/intel_lnd_0066.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_13,train
+raw/intel_image/seg_train/landscape/intel_lnd_0067.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_13,train
+raw/intel_image/seg_train/landscape/intel_lnd_0068.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_13,train
+raw/intel_image/seg_train/landscape/intel_lnd_0069.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_13,train
+raw/intel_image/seg_train/landscape/intel_lnd_0070.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_14,train
+raw/intel_image/seg_train/landscape/intel_lnd_0071.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_14,train
+raw/intel_image/seg_train/landscape/intel_lnd_0072.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_14,train
+raw/intel_image/seg_train/landscape/intel_lnd_0073.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_14,train
+raw/intel_image/seg_train/landscape/intel_lnd_0074.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_14,train
+raw/intel_image/seg_train/landscape/intel_lnd_0075.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_15,train
+raw/intel_image/seg_train/landscape/intel_lnd_0076.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_15,train
+raw/intel_image/seg_train/landscape/intel_lnd_0077.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_15,train
+raw/intel_image/seg_train/landscape/intel_lnd_0078.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_15,train
+raw/intel_image/seg_train/landscape/intel_lnd_0079.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_15,train
+raw/intel_image/seg_train/landscape/intel_lnd_0080.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_16,train
+raw/intel_image/seg_train/landscape/intel_lnd_0081.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_16,train
+raw/intel_image/seg_train/landscape/intel_lnd_0082.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_16,train
+raw/intel_image/seg_train/landscape/intel_lnd_0083.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_16,train
+raw/intel_image/seg_train/landscape/intel_lnd_0084.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_16,train
+raw/intel_image/seg_train/landscape/intel_lnd_0085.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_17,test
+raw/intel_image/seg_train/landscape/intel_lnd_0086.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_17,test
+raw/intel_image/seg_train/landscape/intel_lnd_0087.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_17,test
+raw/intel_image/seg_train/landscape/intel_lnd_0088.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_17,test
+raw/intel_image/seg_train/landscape/intel_lnd_0089.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_17,test
+raw/intel_image/seg_train/landscape/intel_lnd_0090.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_18,train
+raw/intel_image/seg_train/landscape/intel_lnd_0091.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_18,train
+raw/intel_image/seg_train/landscape/intel_lnd_0092.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_18,train
+raw/intel_image/seg_train/landscape/intel_lnd_0093.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_18,train
+raw/intel_image/seg_train/landscape/intel_lnd_0094.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_18,train
+raw/intel_image/seg_train/landscape/intel_lnd_0095.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_19,train
+raw/intel_image/seg_train/landscape/intel_lnd_0096.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_19,train
+raw/intel_image/seg_train/landscape/intel_lnd_0097.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_19,train
+raw/intel_image/seg_train/landscape/intel_lnd_0098.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_19,train
+raw/intel_image/seg_train/landscape/intel_lnd_0099.jpg,lanskap,intel_image,CC0 / Kaggle Open Data,intel_landscape_19,train
+raw/coco_person/coco_person_0000.jpg,orang,coco,CC BY 4.0,coco_person_00,test
+raw/coco_person/coco_person_0001.jpg,orang,coco,CC BY 4.0,coco_person_00,test
+raw/coco_person/coco_person_0002.jpg,orang,coco,CC BY 4.0,coco_person_00,test
+raw/coco_person/coco_person_0003.jpg,orang,coco,CC BY 4.0,coco_person_00,test
+raw/coco_person/coco_person_0004.jpg,orang,coco,CC BY 4.0,coco_person_00,test
+raw/coco_person/coco_person_0005.jpg,orang,coco,CC BY 4.0,coco_person_01,val
+raw/coco_person/coco_person_0006.jpg,orang,coco,CC BY 4.0,coco_person_01,val
+raw/coco_person/coco_person_0007.jpg,orang,coco,CC BY 4.0,coco_person_01,val
+raw/coco_person/coco_person_0008.jpg,orang,coco,CC BY 4.0,coco_person_01,val
+raw/coco_person/coco_person_0009.jpg,orang,coco,CC BY 4.0,coco_person_01,val
+raw/coco_person/coco_person_0010.jpg,orang,coco,CC BY 4.0,coco_person_02,train
+raw/coco_person/coco_person_0011.jpg,orang,coco,CC BY 4.0,coco_person_02,train
+raw/coco_person/coco_person_0012.jpg,orang,coco,CC BY 4.0,coco_person_02,train
+raw/coco_person/coco_person_0013.jpg,orang,coco,CC BY 4.0,coco_person_02,train
+raw/coco_person/coco_person_0014.jpg,orang,coco,CC BY 4.0,coco_person_02,train
+raw/coco_person/coco_person_0015.jpg,orang,coco,CC BY 4.0,coco_person_03,train
+raw/coco_person/coco_person_0016.jpg,orang,coco,CC BY 4.0,coco_person_03,train
+raw/coco_person/coco_person_0017.jpg,orang,coco,CC BY 4.0,coco_person_03,train
+raw/coco_person/coco_person_0018.jpg,orang,coco,CC BY 4.0,coco_person_03,train
+raw/coco_person/coco_person_0019.jpg,orang,coco,CC BY 4.0,coco_person_03,train
+raw/coco_person/coco_person_0020.jpg,orang,coco,CC BY 4.0,coco_person_04,train
+raw/coco_person/coco_person_0021.jpg,orang,coco,CC BY 4.0,coco_person_04,train
+raw/coco_person/coco_person_0022.jpg,orang,coco,CC BY 4.0,coco_person_04,train
+raw/coco_person/coco_person_0023.jpg,orang,coco,CC BY 4.0,coco_person_04,train
+raw/coco_person/coco_person_0024.jpg,orang,coco,CC BY 4.0,coco_person_04,train
+raw/coco_person/coco_person_0025.jpg,orang,coco,CC BY 4.0,coco_person_05,val
+raw/coco_person/coco_person_0026.jpg,orang,coco,CC BY 4.0,coco_person_05,val
+raw/coco_person/coco_person_0027.jpg,orang,coco,CC BY 4.0,coco_person_05,val
+raw/coco_person/coco_person_0028.jpg,orang,coco,CC BY 4.0,coco_person_05,val
+raw/coco_person/coco_person_0029.jpg,orang,coco,CC BY 4.0,coco_person_05,val
+raw/coco_person/coco_person_0030.jpg,orang,coco,CC BY 4.0,coco_person_06,train
+raw/coco_person/coco_person_0031.jpg,orang,coco,CC BY 4.0,coco_person_06,train
+raw/coco_person/coco_person_0032.jpg,orang,coco,CC BY 4.0,coco_person_06,train
+raw/coco_person/coco_person_0033.jpg,orang,coco,CC BY 4.0,coco_person_06,train
+raw/coco_person/coco_person_0034.jpg,orang,coco,CC BY 4.0,coco_person_06,train
+raw/coco_person/coco_person_0035.jpg,orang,coco,CC BY 4.0,coco_person_07,train
+raw/coco_person/coco_person_0036.jpg,orang,coco,CC BY 4.0,coco_person_07,train
+raw/coco_person/coco_person_0037.jpg,orang,coco,CC BY 4.0,coco_person_07,train
+raw/coco_person/coco_person_0038.jpg,orang,coco,CC BY 4.0,coco_person_07,train
+raw/coco_person/coco_person_0039.jpg,orang,coco,CC BY 4.0,coco_person_07,train
+raw/coco_person/coco_person_0040.jpg,orang,coco,CC BY 4.0,coco_person_08,train
+raw/coco_person/coco_person_0041.jpg,orang,coco,CC BY 4.0,coco_person_08,train
+raw/coco_person/coco_person_0042.jpg,orang,coco,CC BY 4.0,coco_person_08,train
+raw/coco_person/coco_person_0043.jpg,orang,coco,CC BY 4.0,coco_person_08,train
+raw/coco_person/coco_person_0044.jpg,orang,coco,CC BY 4.0,coco_person_08,train
+raw/coco_person/coco_person_0045.jpg,orang,coco,CC BY 4.0,coco_person_09,train
+raw/coco_person/coco_person_0046.jpg,orang,coco,CC BY 4.0,coco_person_09,train
+raw/coco_person/coco_person_0047.jpg,orang,coco,CC BY 4.0,coco_person_09,train
+raw/coco_person/coco_person_0048.jpg,orang,coco,CC BY 4.0,coco_person_09,train
+raw/coco_person/coco_person_0049.jpg,orang,coco,CC BY 4.0,coco_person_09,train
+raw/coco_person/coco_person_0050.jpg,orang,coco,CC BY 4.0,coco_person_10,test
+raw/coco_person/coco_person_0051.jpg,orang,coco,CC BY 4.0,coco_person_10,test
+raw/coco_person/coco_person_0052.jpg,orang,coco,CC BY 4.0,coco_person_10,test
+raw/coco_person/coco_person_0053.jpg,orang,coco,CC BY 4.0,coco_person_10,test
+raw/coco_person/coco_person_0054.jpg,orang,coco,CC BY 4.0,coco_person_10,test
+raw/coco_person/coco_person_0055.jpg,orang,coco,CC BY 4.0,coco_person_11,train
+raw/coco_person/coco_person_0056.jpg,orang,coco,CC BY 4.0,coco_person_11,train
+raw/coco_person/coco_person_0057.jpg,orang,coco,CC BY 4.0,coco_person_11,train
+raw/coco_person/coco_person_0058.jpg,orang,coco,CC BY 4.0,coco_person_11,train
+raw/coco_person/coco_person_0059.jpg,orang,coco,CC BY 4.0,coco_person_11,train
+raw/coco_person/coco_person_0060.jpg,orang,coco,CC BY 4.0,coco_person_12,val
+raw/coco_person/coco_person_0061.jpg,orang,coco,CC BY 4.0,coco_person_12,val
+raw/coco_person/coco_person_0062.jpg,orang,coco,CC BY 4.0,coco_person_12,val
+raw/coco_person/coco_person_0063.jpg,orang,coco,CC BY 4.0,coco_person_12,val
+raw/coco_person/coco_person_0064.jpg,orang,coco,CC BY 4.0,coco_person_12,val
+raw/coco_person/coco_person_0065.jpg,orang,coco,CC BY 4.0,coco_person_13,train
+raw/coco_person/coco_person_0066.jpg,orang,coco,CC BY 4.0,coco_person_13,train
+raw/coco_person/coco_person_0067.jpg,orang,coco,CC BY 4.0,coco_person_13,train
+raw/coco_person/coco_person_0068.jpg,orang,coco,CC BY 4.0,coco_person_13,train
+raw/coco_person/coco_person_0069.jpg,orang,coco,CC BY 4.0,coco_person_13,train
+raw/coco_person/coco_person_0070.jpg,orang,coco,CC BY 4.0,coco_person_14,val
+raw/coco_person/coco_person_0071.jpg,orang,coco,CC BY 4.0,coco_person_14,val
+raw/coco_person/coco_person_0072.jpg,orang,coco,CC BY 4.0,coco_person_14,val
+raw/coco_person/coco_person_0073.jpg,orang,coco,CC BY 4.0,coco_person_14,val
+raw/coco_person/coco_person_0074.jpg,orang,coco,CC BY 4.0,coco_person_14,val
+raw/coco_person/coco_person_0075.jpg,orang,coco,CC BY 4.0,coco_person_15,train
+raw/coco_person/coco_person_0076.jpg,orang,coco,CC BY 4.0,coco_person_15,train
+raw/coco_person/coco_person_0077.jpg,orang,coco,CC BY 4.0,coco_person_15,train
+raw/coco_person/coco_person_0078.jpg,orang,coco,CC BY 4.0,coco_person_15,train
+raw/coco_person/coco_person_0079.jpg,orang,coco,CC BY 4.0,coco_person_15,train
+raw/coco_person/coco_person_0080.jpg,orang,coco,CC BY 4.0,coco_person_16,train
+raw/coco_person/coco_person_0081.jpg,orang,coco,CC BY 4.0,coco_person_16,train
+raw/coco_person/coco_person_0082.jpg,orang,coco,CC BY 4.0,coco_person_16,train
+raw/coco_person/coco_person_0083.jpg,orang,coco,CC BY 4.0,coco_person_16,train
+raw/coco_person/coco_person_0084.jpg,orang,coco,CC BY 4.0,coco_person_16,train
+raw/coco_person/coco_person_0085.jpg,orang,coco,CC BY 4.0,coco_person_17,train
+raw/coco_person/coco_person_0086.jpg,orang,coco,CC BY 4.0,coco_person_17,train
+raw/coco_person/coco_person_0087.jpg,orang,coco,CC BY 4.0,coco_person_17,train
+raw/coco_person/coco_person_0088.jpg,orang,coco,CC BY 4.0,coco_person_17,train
+raw/coco_person/coco_person_0089.jpg,orang,coco,CC BY 4.0,coco_person_17,train
+raw/coco_person/coco_person_0090.jpg,orang,coco,CC BY 4.0,coco_person_18,train
+raw/coco_person/coco_person_0091.jpg,orang,coco,CC BY 4.0,coco_person_18,train
+raw/coco_person/coco_person_0092.jpg,orang,coco,CC BY 4.0,coco_person_18,train
+raw/coco_person/coco_person_0093.jpg,orang,coco,CC BY 4.0,coco_person_18,train
+raw/coco_person/coco_person_0094.jpg,orang,coco,CC BY 4.0,coco_person_18,train
+raw/coco_person/coco_person_0095.jpg,orang,coco,CC BY 4.0,coco_person_19,train
+raw/coco_person/coco_person_0096.jpg,orang,coco,CC BY 4.0,coco_person_19,train
+raw/coco_person/coco_person_0097.jpg,orang,coco,CC BY 4.0,coco_person_19,train
+raw/coco_person/coco_person_0098.jpg,orang,coco,CC BY 4.0,coco_person_19,train
+raw/coco_person/coco_person_0099.jpg,orang,coco,CC BY 4.0,coco_person_19,train
+raw/arsip_commons/kitlv_bangunan_00.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_Gebouw_van_de_Handels_Vereenig,train
+raw/arsip_commons/kitlv_bangunan_01.jpg,bangunan,wikimedia_commons,CC BY-SA 3.0,commons_kitlv_KITLV_gebouw_Leiden_jpg,train
+raw/arsip_commons/kitlv_bangunan_02.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A1132___Gebouw_in_Djambi,val
+raw/arsip_commons/kitlv_bangunan_03.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A1265___Gebouw_op_Bali__,test
+raw/arsip_commons/kitlv_bangunan_04.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A1278___Gebouw_in_Soerab,train
+raw/arsip_commons/kitlv_bangunan_05.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A1278___Gebouw_te_Makass,train
+raw/arsip_commons/kitlv_bangunan_06.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A132___Gebouw_te_Soeraba,train
+raw/arsip_commons/kitlv_bangunan_07.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A132___Gebouw_te_Soeraba,train
+raw/arsip_commons/kitlv_bangunan_08.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A345___Gebouw_in_Nederla,train
+raw/arsip_commons/kitlv_bangunan_09.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A491___Gebouw_te_Java__K,val
+raw/arsip_commons/kitlv_bangunan_10.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A698___Gebouw_te_Padang_,train
+raw/arsip_commons/kitlv_bangunan_11.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A723___Gebouw_te_Bangkok,val
+raw/arsip_commons/kitlv_bangunan_12.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A954___Gebouw_te_Tokio__,train
+raw/arsip_commons/kitlv_bangunan_13.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A960___Gebouw_in_Japan__,train
+raw/arsip_commons/kitlv_bangunan_14.jpg,bangunan,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A960___Gebouw_in_Japan__,train
+raw/arsip_commons/kitlv_lanskap_00.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_Berg_Altena_in_Willemstad__KIT,val
+raw/arsip_commons/kitlv_lanskap_01.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_Dal_van_de_West_Otomona_rivier,train
+raw/arsip_commons/kitlv_lanskap_02.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_Dal_van_de_West_Otomona_rivier,train
+raw/arsip_commons/kitlv_lanskap_03.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_Dal_van_de_West_Otomona_rivier,train
+raw/arsip_commons/kitlv_lanskap_04.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_De_rivier_Kali_Pandjang__gezie,test
+raw/arsip_commons/kitlv_lanskap_05.jpg,lanskap,wikimedia_commons,Public domain,commons_kitlv_Gezicht_vanaf_de_rivier_op_Ber,train
+raw/arsip_commons/kitlv_lanskap_06.jpg,lanskap,wikimedia_commons,Public domain,commons_kitlv_KITLV___37336___Demmeni__J____,train
+raw/arsip_commons/kitlv_lanskap_07.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A497___Leden_van_de_Leah,test
+raw/arsip_commons/kitlv_lanskap_08.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A625___Dal_van_de_West_O,test
+raw/arsip_commons/kitlv_lanskap_09.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A870___Rivier_in_Marowij,train
+raw/arsip_commons/kitlv_lanskap_10.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A870___Rivier_in_Marowij,train
+raw/arsip_commons/kitlv_lanskap_11.jpg,lanskap,wikimedia_commons,Public domain,commons_kitlv_KITLV_A871___Rivier__vermoedel,test
+raw/arsip_commons/kitlv_lanskap_12.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_Mt__Hagen__gezien_vanuit_een_p,train
+raw/arsip_commons/kitlv_lanskap_13.jpg,lanskap,wikimedia_commons,CC BY-SA 3.0,commons_kitlv_Tropenmuseum_Royal_Tropical_In,train
+raw/arsip_commons/kitlv_lanskap_14.jpg,lanskap,wikimedia_commons,CC BY 4.0,commons_kitlv_Vallei_van_de_West_Otomona_riv,train
+raw/arsip_commons/kitlv_orang_00.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A489___Portret_van_profe,train
+raw/arsip_commons/kitlv_orang_01.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_Charl,val
+raw/arsip_commons/kitlv_orang_02.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_Ferdi,train
+raw/arsip_commons/kitlv_orang_03.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_Garib,val
+raw/arsip_commons/kitlv_orang_04.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_de_he,test
+raw/arsip_commons/kitlv_orang_05.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_de_he,test
+raw/arsip_commons/kitlv_orang_06.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_de_he,test
+raw/arsip_commons/kitlv_orang_07.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_mevro,val
+raw/arsip_commons/kitlv_orang_08.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_mevro,val
+raw/arsip_commons/kitlv_orang_09.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_mevro,val
+raw/arsip_commons/kitlv_orang_10.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_mevro,val
+raw/arsip_commons/kitlv_orang_11.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_mevro,val
+raw/arsip_commons/kitlv_orang_12.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_profe,train
+raw/arsip_commons/kitlv_orang_13.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A490___Portret_van_profe,train
+raw/arsip_commons/kitlv_orang_14.jpg,orang,wikimedia_commons,CC BY 4.0,commons_kitlv_KITLV_A949___Portret_van_een_g,train
