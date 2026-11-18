@@ -47,6 +47,21 @@ python -m venv .venv
 pip install -r backend/requirements.txt
 ```
 
+## Penyiapan Model (.pth)
+
+File model `.pth` tidak disertakan langsung di Git repository (diabaikan oleh `.gitignore`).
+Untuk menyiapkan model:
+1. Unduh arsip model `sunnyrest_models.zip` dari Google Drive tim, lalu letakkan di folder root atau `Downloads/`.
+2. Jalankan skrip persiapan otomatis:
+   ```bash
+   python backend/setup_models.py
+   ```
+   *(Atau ekstrak manual file `.pth` langsung ke dalam folder `backend/models/`)*.
+3. Jalankan pengujian untuk memverifikasi:
+   ```bash
+   python backend/tests/test_models.py
+   ```
+
 ## Menjalankan API
 
 ```bash
