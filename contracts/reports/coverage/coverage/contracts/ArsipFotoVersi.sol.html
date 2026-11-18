@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts\ArsipFotoVersi.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> ArsipFotoVersi.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>46/46</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">98.39% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>61/62</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>12/12</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>60/60</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line high'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">37×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-yes">35×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">18×</span>
+<span class="cline-any cline-yes">16×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">41×</span>
+<span class="cline-any cline-yes">40×</span>
+<span class="cline-any cline-yes">39×</span>
+<span class="cline-any cline-yes">38×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">37×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">36×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+&nbsp;
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+&nbsp;
+/**
+ * @title ArsipFotoVersi
+ * @author Haikal Alie Rhanditya (246651007)
+ * @notice Kontrak ERC-721 untuk mencatat silsilah versi arsip foto, hasil restorasi AI, dan pembayaran biaya restorasi on-chain.
+ * @dev Mengimplementasikan relasi parent-child, pencegahan duplikasi hash, kontrol akses kurator, dan ReentrancyGuard.
+ */
+contract ArsipFotoVersi is ERC721URIStorage, AccessControl, ReentrancyGuard {
+    bytes32 public constant CURATOR_ROLE = keccak256("CURATOR_ROLE");
+&nbsp;
+    struct Versi {
+        uint256 parentId;      // 0 = versi asli (tanpa induk)
+        bytes32 fileHash;      // SHA-256 hash dari berkas foto asli/turunan
+        address publisher;     // Alamat wallet kurator yang menerbitkan
+        uint64  publishedAt;   // Waktu block saat versi dicatat on-chain
+    }
+&nbsp;
+    struct Permintaan {
+        address pemohon;       // Alamat wallet pengguna yang membayar biaya restorasi
+        uint256 parentId;      // ID token versi sumber yang diminta untuk direstorasi
+        uint256 jumlah;        // Nilai wei yang dibayarkan saat pengajuan
+        uint64  diajukanPada;  // Waktu block saat permintaan diajukan
+        bool    selesai;       // True jika versi turunan sudah diterbitkan atau dana sudah dikembalikan
+    }
+&nbsp;
+    // Mapping tokenId =&gt; data Versi
+    mapping(uint256 =&gt; Versi) private _versi;
+&nbsp;
+    // Mapping pencegahan duplikasi hash berkas (anti-duplikat)
+    mapping(bytes32 =&gt; bool) public hashTerpakai;
+&nbsp;
+    // Penghitung ID token on-chain (mulai dari 1, ID 0 dikhususkan sebagai penanda root)
+    uint256 public nextId;
+&nbsp;
+    // Pengaturan dan pencatatan permintaan restorasi berbayar
+    uint256 public biayaRestorasi = 0.01 ether;
+    uint256 public nextRequestId = 1;
+    uint256 public danaTertahan;
+    mapping(uint256 =&gt; Permintaan) private _permintaan;
+&nbsp;
+    // Custom errors untuk efisiensi gas dan kejelasan penanganan error di UI
+    error AlamatPenerimaNol();
+    error UriKosong();
+    error HashBerkasNol();
+    error HashSudahTerpakai(bytes32 hash);
+    error ParentTidakTerdaftar(uint256 parentId);
+    error TokenTidakDitemukan(uint256 tokenId);
+    error BiayaTidakTepat(uint256 dikirim, uint256 dibutuhkan);
+    error PermintaanTidakDitemukan(uint256 requestId);
+    error PermintaanSudahSelesai(uint256 requestId);
+    error TujuanNol();
+    error SaldoKosong();
+    error TransferGagal();
+&nbsp;
+    // Events on-chain
+    event VersiDiterbitkan(
+        uint256 indexed tokenId,
+        uint256 indexed parentId,
+        address indexed to,
+        address publisher,
+        bytes32 fileHash,
+        string uri
+    );
+    event RestorasiDiajukan(
+        uint256 indexed requestId,
+        uint256 indexed parentId,
+        address indexed pemohon,
+        uint256 jumlah
+    );
+    event RestorasiSelesai(uint256 indexed requestId, uint256 indexed tokenId);
+    event BiayaDiubah(uint256 lama, uint256 baru);
+    event BiayaDitarik(address indexed tujuan, uint256 jumlah);
+    event BiayaDikembalikan(uint256 indexed requestId, address indexed pemohon, uint256 jumlah);
+&nbsp;
+    /**
+     * @notice Constructor: Menginisialisasi nama token, simbol, dan menetapkan hak akses awal.
+     * @dev Memberikan hak DEFAULT_ADMIN_ROLE dan CURATOR_ROLE ke deployer kontrak.
+     */
+    constructor(address initialCurator) ERC721("ArsipFotoVersi", "ARSIP") {
+        if (initialCurator == address(0)) revert AlamatPenerimaNol();
+&nbsp;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(CURATOR_ROLE, msg.sender);
+&nbsp;
+        if (initialCurator != msg.sender) {
+            _grantRole(CURATOR_ROLE, initialCurator);
+        }
+&nbsp;
+        nextId = 1; // Token ID dimulai dari 1
+    }
+&nbsp;
+    /**
+     * @notice [FUNGSI KUNCI] Menerbitkan versi baru foto arsip (versi asli maupun turunan kurator).
+     * @dev Hanya kurator terverifikasi (CURATOR_ROLE) yang dapat memanggil fungsi ini.
+     */
+    function terbitkanVersi(
+        address to,
+        string calldata uri,
+        bytes32 fileHash,
+        uint256 parentId
+    ) external onlyRole(CURATOR_ROLE) returns (uint256) {
+        return _terbitkan(to, uri, fileHash, parentId);
+    }
+&nbsp;
+    /**
+     * @notice [FUNGSI KUNCI] Mengajukan permintaan restorasi berbayar untuk versi yang sudah tercatat on-chain.
+     * @dev Terbuka untuk siapa saja dengan wallet; wajib membayar tepat sebesar `biayaRestorasi`.
+     * Dana ditahan di `danaTertahan` hingga kurator menerbitkan hasil atau admin mengembalikan dana.
+     *
+     * @param parentId ID token versi sumber yang sudah terdaftar (tidak boleh 0)
+     * @return requestId ID unik permintaan restorasi untuk verifikasi backend dan kurator
+     */
+    function ajukanRestorasi(uint256 parentId) external payable returns (uint256 requestId) {
+        if (parentId == 0 || _ownerOf(parentId) == address(0)) revert ParentTidakTerdaftar(parentId);
+        if (msg.value != biayaRestorasi) revert BiayaTidakTepat(msg.value, biayaRestorasi);
+&nbsp;
+        requestId = nextRequestId++;
+        _permintaan[requestId] = Permintaan({
+            pemohon: msg.sender,
+            parentId: parentId,
+            jumlah: msg.value,
+            diajukanPada: uint64(block.timestamp),
+            selesai: false
+        });
+        danaTertahan += msg.value;
+&nbsp;
+        emit RestorasiDiajukan(requestId, parentId, msg.sender, msg.value);
+    }
+&nbsp;
+    /**
+     * @notice [FUNGSI KUNCI] Menerbitkan versi turunan dari permintaan restorasi berbayar yang valid.
+     * @dev Menandai permintaan selesai dan melepaskan dana dari `danaTertahan` agar dapat ditarik admin.
+     *
+     * @param to Alamat wallet penerima token turunan
+     * @param uri URI metadata IPFS hasil restorasi
+     * @param fileHash SHA-256 hash berkas hasil restorasi
+     * @param requestId ID permintaan restorasi yang dibayar sebelumnya
+     * @return tokenId ID token baru yang merujuk parentId dari permintaan
+     */
+    function terbitkanVersiRestorasi(
+        address to,
+        string calldata uri,
+        bytes32 fileHash,
+        uint256 requestId
+    ) external onlyRole(CURATOR_ROLE) returns (uint256 tokenId) {
+        if (requestId == 0 || requestId &gt;= nextRequestId) revert PermintaanTidakDitemukan(requestId);
+        Permintaan storage req = _permintaan[requestId];
+        if (req.selesai) revert PermintaanSudahSelesai(requestId);
+&nbsp;
+        req.selesai = true;
+        danaTertahan -= req.jumlah;
+&nbsp;
+        tokenId = _terbitkan(to, uri, fileHash, req.parentId);
+        emit RestorasiSelesai(requestId, tokenId);
+    }
+&nbsp;
+    /**
+     * @notice [FUNGSI KUNCI] Mengembalikan biaya restorasi ke pemohon jika proses AI/kurasi dibatalkan sebelum selesai.
+     * @dev Hanya admin yang berwenang. Menerapkan Checks-Effects-Interactions dan `nonReentrant`.
+     */
+    function kembalikanBiaya(uint256 requestId) external onlyRole(DEFAULT_ADMIN_ROLE) <span class="missing-if-branch" title="else path not taken" >E</span>nonReentrant {
+        if (requestId == 0 || requestId &gt;= nextRequestId) revert PermintaanTidakDitemukan(requestId);
+        Permintaan storage req = _permintaan[requestId];
+        if (req.selesai) revert PermintaanSudahSelesai(requestId);
+&nbsp;
+        uint256 jumlah = req.jumlah;
+        address pemohon = req.pemohon;
+&nbsp;
+        req.selesai = true;
+        danaTertahan -= jumlah;
+&nbsp;
+        (bool ok, ) = payable(pemohon).call{value: jumlah}("");
+        if (!ok) revert TransferGagal();
+&nbsp;
+        emit BiayaDikembalikan(requestId, pemohon, jumlah);
+    }
+&nbsp;
+    /**
+     * @notice Mengubah besaran biaya restorasi (dalam wei). Hanya dapat dilakukan oleh admin.
+     */
+    function aturBiaya(uint256 baru) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 lama = biayaRestorasi;
+        biayaRestorasi = baru;
+        emit BiayaDiubah(lama, baru);
+    }
+&nbsp;
+    /**
+     * @notice [FUNGSI KUNCI] Menarik saldo biaya restorasi yang sudah selesai ke alamat tujuan.
+     * @dev Tidak dapat menarik dana permintaan aktif yang masih berada di `danaTertahan`.
+     */
+    function tarikBiaya(address payable tujuan) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        if (tujuan == address(0)) revert TujuanNol();
+        uint256 jumlah = address(this).balance - danaTertahan;
+        if (jumlah == 0) revert SaldoKosong();
+&nbsp;
+        (bool ok, ) = tujuan.call{value: jumlah}("");
+        if (!ok) revert TransferGagal();
+&nbsp;
+        emit BiayaDitarik(tujuan, jumlah);
+    }
+&nbsp;
+    /**
+     * @notice Membaca detail permintaan restorasi berdasarkan `requestId`.
+     */
+    function getPermintaan(uint256 requestId) external view returns (Permintaan memory) {
+        if (requestId == 0 || requestId &gt;= nextRequestId) revert PermintaanTidakDitemukan(requestId);
+        return _permintaan[requestId];
+    }
+&nbsp;
+    /**
+     * @notice [FUNGSI KUNCI] Mengambil data relasi silsilah versi dari suatu token.
+     */
+    function getVersi(uint256 tokenId) external view returns (Versi memory) {
+        if (_ownerOf(tokenId) == address(0)) revert TokenTidakDitemukan(tokenId);
+        return _versi[tokenId];
+    }
+&nbsp;
+    /**
+     * @dev Logika inti penerbitan versi yang dipakai bersama oleh `terbitkanVersi` dan `terbitkanVersiRestorasi`.
+     */
+    function _terbitkan(
+        address to,
+        string calldata uri,
+        bytes32 fileHash,
+        uint256 parentId
+    ) internal returns (uint256) {
+        if (to == address(0)) revert AlamatPenerimaNol();
+        if (bytes(uri).length == 0) revert UriKosong();
+        if (fileHash == bytes32(0)) revert HashBerkasNol();
+        if (hashTerpakai[fileHash]) revert HashSudahTerpakai(fileHash);
+&nbsp;
+        if (parentId != 0 &amp;&amp; _ownerOf(parentId) == address(0)) {
+            revert ParentTidakTerdaftar(parentId);
+        }
+&nbsp;
+        uint256 tokenId = nextId;
+        nextId++;
+&nbsp;
+        hashTerpakai[fileHash] = true;
+        _versi[tokenId] = Versi({
+            parentId: parentId,
+            fileHash: fileHash,
+            publisher: msg.sender,
+            publishedAt: uint64(block.timestamp)
+        });
+&nbsp;
+        _safeMint(to, tokenId);
+        _setTokenURI(tokenId, uri);
+&nbsp;
+        emit VersiDiterbitkan(tokenId, parentId, to, msg.sender, fileHash, uri);
+&nbsp;
+        return tokenId;
+    }
+&nbsp;
+    /**
+     * @notice Dukungan antarmuka ERC-165 untuk ERC721URIStorage dan AccessControl.
+     */
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721URIStorage, AccessControl)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+&nbsp;
+    /**
+     * @notice Override tokenURI bawaan ERC721URIStorage untuk memastikan kepatuhan pembacaan CID IPFS.
+     */
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721URIStorage)
+        returns (string memory)
+    {
+        if (_ownerOf(tokenId) == address(0)) revert TokenTidakDitemukan(tokenId);
+        return super.tokenURI(tokenId);
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Nov 18 2026 20:20:14 GMT+0800 (Central Indonesia Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

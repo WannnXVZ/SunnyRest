@@ -8,7 +8,7 @@ interface TopHeaderProps {
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
-  const { activePage, wallet, switchNetwork, toggleRole } = useArchiveStore();
+  const { activePage, wallet, switchNetwork, connectWallet, restorationFeeEth } = useArchiveStore();
 
   const pageBreadcrumbMap: Record<string, string> = {
     ringkasan: 'Workspace / Ringkasan',
@@ -25,10 +25,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
 
   return (
     <div className="sticky top-0 z-30 bg-surface shadow-subtle">
-      {/* Top Demo Notice Banner */}
+      {/* Top Status Banner */}
       <div className="bg-paper border-b border-border/80 px-4 md:px-8 py-1.5 flex items-center justify-between text-[11px] font-mono text-ink-muted">
-        <span>Mode demo · Data contoh</span>
-        <span className="hidden sm:inline">Tidak ada publikasi atau transaksi nyata · Izin contoh belum diverifikasi</span>
+        <span>
+          Workspace Kurator · {wallet.chainName} ({wallet.chainId})
+        </span>
+        <span className="hidden sm:inline">
+          {restorationFeeEth
+            ? `Biaya restorasi kontrak: ${restorationFeeEth} ETH · Status peran diverifikasi on-chain`
+            : 'Menunggu sinkronisasi kontrak RPC lokal/Sepolia'}
+        </span>
       </div>
 
       <header className="h-16 border-b border-border px-4 md:px-8 flex items-center justify-between">
@@ -60,7 +66,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
             <span>Lihat Publik</span>
           </button>
 
-          {/* Network Target Badges (Matching reference designs: Lokal · simulasi & Sepolia) */}
+          {/* Network Target Badges */}
           <button
             type="button"
             onClick={() => switchNetwork(wallet.chainId === 11155111 ? 31337 : 11155111)}
@@ -68,26 +74,31 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-btn bg-paper border border-border text-xs font-mono text-ink hover:border-forest transition-colors"
           >
             <span className={`w-2 h-2 rounded-full ${wallet.chainId === 31337 ? 'bg-gold' : 'bg-forest'}`} />
-            <span>{wallet.chainId === 31337 ? 'Lokal · simulasi' : 'Sepolia'}</span>
-            <span className="text-ink-muted hidden md:inline">({wallet.chainId === 11155111 ? 'terhubung' : 'simulasi'})</span>
+            <span>{wallet.chainId === 31337 ? 'Hardhat Lokal' : 'Sepolia'}</span>
           </button>
 
           {/* User Role / Wallet Badge */}
           <button
             type="button"
-            onClick={toggleRole}
-            title="Klik untuk beralih peran (Kurator / Kreator)"
+            onClick={() => {
+              if (!wallet.isConnected) void connectWallet();
+            }}
+            title="Status akun wallet & peran on-chain"
             className="flex items-center gap-2 px-2.5 py-1.5 rounded-btn bg-paper border border-border text-xs font-mono text-ink hover:border-forest transition-colors"
           >
             <UserCheck className="w-3.5 h-3.5 text-forest" />
-            {wallet.address && (
+            {wallet.address ? (
               <span className="font-mono text-ink">
                 {truncateIdentifier(wallet.address, 4, 3)}
               </span>
+            ) : (
+              <span className="font-mono text-ink">Hubungkan</span>
             )}
-            <span className="hidden sm:inline text-ink-muted">
-              {wallet.isCurator ? 'Kurator · akun contoh' : 'Kreator · akun contoh'}
-            </span>
+            {wallet.isConnected && (
+              <span className="hidden sm:inline text-ink-muted">
+                {wallet.isCurator ? 'Kurator' : 'Non-Kurator'}
+              </span>
+            )}
           </button>
         </div>
       </header>

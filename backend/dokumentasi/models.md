@@ -26,12 +26,12 @@
 ### 1.3 Inferensi
 - Input: Gambar RGB (resolusi acak)
 - Preprocessing: Resize 224x224, Normalize (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-- Output: 
+- Output (skala `confidence` dan `scores` 0.0–1.0): 
   ```json
   {
     "label": "orang",
-    "confidence": 87.5,
-    "scores": {"orang": 87.5, "bangunan": 6.2, "lanskap": 6.3},
+    "confidence": 0.875,
+    "scores": {"orang": 0.875, "bangunan": 0.062, "lanskap": 0.063},
     "model_version": "efficientnet_b0_v1"
   }
   ```
@@ -107,30 +107,32 @@
 
 ### 4.1 `/predict` (POST)
 - **Input**: File gambar (multipart/form-data)
-- **Output**:
+- **Output** (skala `0.0`–`1.0`):
   ```json
   {
     "label": "orang",
-    "confidence": 87.5,
-    "scores": {"orang": 87.5, "bangunan": 6.2, "lanskap": 6.3},
+    "confidence": 0.875,
+    "scores": {"orang": 0.875, "bangunan": 0.062, "lanskap": 0.063},
     "model_version": "efficientnet_b0_v1"
   }
   ```
-- **Error**: 400 (file rusak), 503 (model gagal)
+- **Error**: 400 (file rusak/kosong), 413 (file melebihi batas), 503 (model tidak dimuat/gagal)
 
 ### 4.2 `/enhance` (POST)
-- **Input**: File gambar + parameter `scale` (integer, default=4)
+- **Input**: File gambar + parameter `scale=4` + opsional `request_id` (wajib bila `VERIFY_ONCHAIN_PAYMENT=true`)
 - **Output**: 
-  - Stream PNG (image/png)
-  - Header tambahan: `X-Method`, `X-Model-Version`, `X-Inference-Time-MS`
-- **Error**: 503 (SR model tidak terload)
+  - Stream PNG (`image/png`)
+  - Header tambahan: `X-Method`, `X-Model-Version`, `X-Scale`, `X-Inference-Time-MS`, `X-Payment-Verified`, `X-Request-Id`
+- **Error**: 400 (`scale != 4` atau file rusak), 402/403 (pembayaran on-chain belum sah/sudah dipakai), 413 (dimensi/ukuran berlebih), 503 (SR model tidak terload)
 
 ### 4.3 `/health` (GET)
 - **Output**:
   ```json
   {
     "status": "ok",
-    "model_loaded": true
+    "model_loaded": true,
+    "classifier_loaded": true,
+    "sr_loaded": true
   }
   ```
 

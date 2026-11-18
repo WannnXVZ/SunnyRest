@@ -14,11 +14,15 @@ export interface ArchiveVersion {
   label: string;
   parentId: string | null;
   ipfsCid: string;
+  metadataUri?: string;
   fileHash: string;
   onChainTokenId?: number;
   transactionHash?: string;
+  requestId?: number;
+  onChainVerified?: boolean;
   timestamp: string;
   methodLabel?: string;
+  modelVersion?: string;
   imageUrl: string;
 }
 
@@ -68,4 +72,3 @@ export interface WalletState {
   isConnecting: boolean;
   error?: string | null;
 }
-

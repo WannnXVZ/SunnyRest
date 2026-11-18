@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, FileText, CheckCircle2, Info, ArrowRight, Loader2 } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { computeFileSHA256 } from '../lib/hash';
+import { predictPhotoCategory } from '../lib/api';
 import { PhotoCategory } from '../types';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
@@ -14,6 +15,8 @@ export const UploadPage: React.FC = () => {
   const [fileHash, setFileHash] = useState<string>('');
   const [isHashing, setIsHashing] = useState<boolean>(false);
   const [isDuplicate, setIsDuplicate] = useState<boolean>(false);
+  const [aiConfidence, setAiConfidence] = useState<number | null>(null);
+  const [aiNote, setAiNote] = useState<string>('');
 
   // Form Fields matching Image 2
   const [title, setTitle] = useState('Stasiun di ujung kota');
@@ -51,6 +54,16 @@ export const UploadPage: React.FC = () => {
       setFileHash(hash);
       const duplicateFound = archives.some((a) => a.originalHash.toLowerCase() === hash.toLowerCase());
       setIsDuplicate(duplicateFound);
+
+      try {
+        const pred = await predictPhotoCategory(file);
+        setCategory(pred.label);
+        setAiConfidence(pred.confidence);
+        setAiNote(`Saran AI (${pred.model_version}): ${pred.label.toUpperCase()} (${(pred.confidence * 100).toFixed(1)}%). Keputusan tetap pada kurator.`);
+      } catch {
+        setAiConfidence(null);
+        setAiNote('Layanan inferensi AI tidak terjangkau; kurator atau pengunggah memilih kategori secara manual.');
+      }
     } catch {
       setErrorMsg('Gagal menghitung SHA-256 berkas.');
     } finally {
@@ -88,14 +101,14 @@ export const UploadPage: React.FC = () => {
         status: 'menunggu_tinjauan',
         aiPrediction: {
           category,
-          confidence: 0.94,
-          advisoryNote: `Saran AI: ${category.toUpperCase()} (94%). Keputusan tetap pada kurator.`,
+          confidence: aiConfidence ?? 0,
+          advisoryNote: aiNote || `Kategori awal dipilih manual: ${category.toUpperCase()}. Keputusan tetap pada kurator.`,
         },
         curatorNotes: contextNotes,
         originalHash: hashToUse,
         originalCid: mockCid,
       },
-      previewUrl || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80'
+      previewUrl || '/samples/bangunan_contoh.jpg'
     );
 
     setSelectedArchiveId(newId);
@@ -259,9 +272,9 @@ export const UploadPage: React.FC = () => {
               <div className="flex items-center gap-3.5 min-w-0">
                 <div className="w-16 h-14 rounded-btn bg-paper border border-border overflow-hidden flex-shrink-0 flex items-center justify-center">
                   <img
-                    src={previewUrl || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=300&q=80'}
+                    src={previewUrl || '/samples/bangunan_contoh.jpg'}
                     alt="Pratinjau berkas"
-                    className="w-full h-full object-cover grayscale"
+                    className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="space-y-1 min-w-0">

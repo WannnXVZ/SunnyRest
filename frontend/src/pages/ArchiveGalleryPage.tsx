@@ -234,7 +234,7 @@ export const ArchiveGalleryPage: React.FC = () => {
           {filteredArchives.map((item) => {
             const originalVer = item.versions.find((v) => v.versionType === 'original') || item.versions[0];
             const hasDerivative = item.versions.some((v) => v.versionType === 'derivative');
-            const versionText = hasDerivative ? 'Asli + restorasi x2' : 'Versi asli';
+            const versionText = hasDerivative ? 'Asli + restorasi x4' : 'Versi asli';
 
             return (
               <div
@@ -282,8 +282,8 @@ export const ArchiveGalleryPage: React.FC = () => {
                 <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-[11px] font-mono text-ink-muted">
-                      <span>{item.id} / DEMO</span>
-                      <span>{item.status === 'tercatat' ? 'Terdaftar · simulasi' : 'Antrean kurasi'}</span>
+                      <span>{item.id}</span>
+                      <span>{originalVer.onChainVerified ? `Token #${originalVer.onChainTokenId}` : 'Draf / Antrean'}</span>
                     </div>
 
                     <h3 className="font-display font-bold text-base text-ink group-hover:text-forest transition-colors line-clamp-1">

@@ -13,6 +13,7 @@ export const VerificationPage: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishStep, setPublishStep] = useState<number>(1);
   const [txReceipt, setTxReceipt] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   const activeArchive =
     archives.find(
@@ -44,20 +45,21 @@ export const VerificationPage: React.FC = () => {
   const handlePublish = async () => {
     if (!activeArchive) return;
     setIsPublishing(true);
+    setPublishError(null);
     setPublishStep(1);
 
-    // Step 1: Wallet signature request
-    await new Promise((r) => setTimeout(r, 900));
-    setPublishStep(2);
+    const res = await publishToBlockchain(activeArchive.id, (stage) => {
+      if (stage === 'waiting_wallet') setPublishStep(1);
+      if (stage === 'waiting_confirmation') setPublishStep(2);
+    });
 
-    // Step 2: Contract mining & confirmation
-    await new Promise((r) => setTimeout(r, 1200));
-
-    // Step 3: Receipt generated
-    const res = await publishToBlockchain(activeArchive.id);
-    setPublishStep(3);
-    setTxReceipt(res.txHash || null);
     setIsPublishing(false);
+    if (res.success) {
+      setPublishStep(3);
+      setTxReceipt(res.txHash || null);
+    } else {
+      setPublishError(res.error || 'Transaksi on-chain ditolak atau gagal.');
+    }
   };
 
   return (
@@ -246,6 +248,11 @@ export const VerificationPage: React.FC = () => {
           )}
 
           {/* Trust Boundary Advisory Callout */}
+          {publishError && (
+            <div className="p-3.5 rounded-btn bg-status-dangerBg border border-border text-xs text-status-danger leading-relaxed">
+              {publishError}
+            </div>
+          )}
           <div className="p-3.5 rounded-btn bg-status-warningBg border border-border text-xs text-status-warning leading-relaxed">
             Tangani akun berganti, jaringan salah, wallet ditolak, transaksi gagal, dan akun tidak memiliki peran kurator. Jangan menganggap CID atau prediksi AI sebagai bukti keaslian.
           </div>

@@ -84,12 +84,18 @@ export const CuratorReviewPage: React.FC = () => {
 
   const handleSignAndPublish = async () => {
     setIsSigning(true);
+    setFeedbackMsg(null);
     const res = await publishToBlockchain(activeArchive.id);
     setIsSigning(false);
     if (res.success) {
       setFeedbackMsg({
         type: 'success',
-        text: `Arsip ${activeArchive.id} berhasil dicatatkan on-chain dengan Token ID #${res.tokenId}. Transaksi: ${res.txHash?.substring(0, 16)}...`,
+        text: `Arsip ${activeArchive.id} berhasil dicatatkan on-chain dengan Token ID #${res.tokenId} (gasUsed: ${res.gasUsed}). Transaksi: ${res.txHash}`,
+      });
+    } else {
+      setFeedbackMsg({
+        type: 'danger',
+        text: res.error || 'Pencatatan transaksi on-chain gagal atau dibatalkan.',
       });
     }
   };
@@ -131,11 +137,11 @@ export const CuratorReviewPage: React.FC = () => {
             {activeArchive.status.replace('_', ' ')}
           </span>
           <span className="text-ink-muted">
-            Diajukan {activeArchive.createdAt} · tanggal contoh
+            Diajukan {activeArchive.createdAt}
           </span>
         </div>
         <span className="text-ink-muted">
-          Kreator {wallet.address ? `${wallet.address.slice(0, 4)}...${wallet.address.slice(-4)}` : '0x7A...91C2'} · Lokal
+          Wallet: {wallet.address ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` : 'Belum terhubung'} · {wallet.chainName}
         </span>
       </div>
 
@@ -465,8 +471,10 @@ export const CuratorReviewPage: React.FC = () => {
             </p>
 
             <div className="space-y-1 text-xs font-mono">
-              <p className="text-[11px] text-ink-muted">Penanda tangan yang diperlukan</p>
-              <p className="text-ink font-medium">0xC4...82A1 · Kurator (akun contoh)</p>
+              <p className="text-[11px] text-ink-muted">Penanda tangan aktif (CURATOR_ROLE)</p>
+              <p className="text-ink font-medium">
+                {wallet.address || 'Hubungkan wallet kurator di MetaMask'}
+              </p>
             </div>
 
             <button

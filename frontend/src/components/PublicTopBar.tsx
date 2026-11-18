@@ -4,7 +4,7 @@ import { useArchiveStore } from '../store/useArchiveStore';
 import { PublicTab } from '../types';
 
 export const PublicTopBar: React.FC = () => {
-  const { publicTab, setPublicTab, setViewMode, wallet } = useArchiveStore();
+  const { publicTab, setPublicTab, setViewMode, wallet, restorationFeeEth } = useArchiveStore();
 
   const navLinks: { tab: PublicTab; label: string; icon: React.ReactNode; badge?: string }[] = [
     { tab: 'semua', label: 'Koleksi Arsip', icon: <Images className="w-4 h-4" /> },
@@ -12,7 +12,7 @@ export const PublicTopBar: React.FC = () => {
       tab: 'unggah_restorasi',
       label: 'Unggah & Restorasi',
       icon: <UploadCloud className="w-4 h-4" />,
-      badge: '0.01 ETH',
+      badge: restorationFeeEth ? `${restorationFeeEth} ETH` : undefined,
     },
     { tab: 'restorasi', label: 'Etalase Restorasi', icon: <Sparkles className="w-4 h-4" /> },
     { tab: 'verifikasi', label: 'Verifikasi Terbuka', icon: <ShieldCheck className="w-4 h-4" /> },

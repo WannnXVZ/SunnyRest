@@ -34,7 +34,15 @@ export type { IERC165 } from "./@openzeppelin/contracts/utils/introspection/IERC
 export { IERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/IERC165__factory";
 export type { SafeCast } from "./@openzeppelin/contracts/utils/math/SafeCast";
 export { SafeCast__factory } from "./factories/@openzeppelin/contracts/utils/math/SafeCast__factory";
+export type { ReentrancyGuard } from "./@openzeppelin/contracts/utils/ReentrancyGuard";
+export { ReentrancyGuard__factory } from "./factories/@openzeppelin/contracts/utils/ReentrancyGuard__factory";
 export type { Strings } from "./@openzeppelin/contracts/utils/Strings";
 export { Strings__factory } from "./factories/@openzeppelin/contracts/utils/Strings__factory";
 export type { ArsipFotoVersi } from "./contracts/ArsipFotoVersi";
 export { ArsipFotoVersi__factory } from "./factories/contracts/ArsipFotoVersi__factory";
+export type { IArsipTarget } from "./contracts/test-helpers/PenyerangReentrancy.sol/IArsipTarget";
+export { IArsipTarget__factory } from "./factories/contracts/test-helpers/PenyerangReentrancy.sol/IArsipTarget__factory";
+export type { PenerimaMenolakETH } from "./contracts/test-helpers/PenyerangReentrancy.sol/PenerimaMenolakETH";
+export { PenerimaMenolakETH__factory } from "./factories/contracts/test-helpers/PenyerangReentrancy.sol/PenerimaMenolakETH__factory";
+export type { PenyerangReentrancy } from "./contracts/test-helpers/PenyerangReentrancy.sol/PenyerangReentrancy";
+export { PenyerangReentrancy__factory } from "./factories/contracts/test-helpers/PenyerangReentrancy.sol/PenyerangReentrancy__factory";

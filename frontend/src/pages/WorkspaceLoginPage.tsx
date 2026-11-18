@@ -9,14 +9,14 @@ export const WorkspaceLoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const handleConnectAndLogin = async (forceCurator = true) => {
+  const handleConnectAndLogin = async () => {
     setIsLoading(true);
     setAuthError(null);
     try {
       if (!wallet.isConnected) {
         await connectWallet();
       }
-      const res = await loginToWorkspace(forceCurator);
+      const res = await loginToWorkspace();
       if (!res.success) {
         setAuthError(res.reason || 'Autentikasi gagal.');
       }
@@ -120,7 +120,7 @@ export const WorkspaceLoginPage: React.FC = () => {
             <button
               type="button"
               disabled={isLoading}
-              onClick={() => handleConnectAndLogin(true)}
+              onClick={handleConnectAndLogin}
               className="w-full py-3 px-4 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle flex items-center justify-center gap-2 min-h-[44px] transition-colors"
             >
               {isLoading ? (
@@ -131,7 +131,7 @@ export const WorkspaceLoginPage: React.FC = () => {
               ) : (
                 <>
                   <Shield className="w-4 h-4" />
-                  <span>Hubungkan MetaMask & Masuk</span>
+                  <span>Hubungkan MetaMask & Verifikasi Kurator</span>
                 </>
               )}
             </button>
@@ -139,46 +139,20 @@ export const WorkspaceLoginPage: React.FC = () => {
             <button
               type="button"
               disabled={isLoading}
-              onClick={() => handleConnectAndLogin(true)}
+              onClick={handleConnectAndLogin}
               className="w-full py-3 px-4 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle flex items-center justify-center gap-2 min-h-[44px] transition-colors"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Membuka Workspace...</span>
+                  <span>Memverifikasi CURATOR_ROLE...</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Masuk Sebagai Kurator</span>
+                  <span>Masuk Sebagai Kurator Terverifikasi</span>
                 </>
               )}
-            </button>
-          )}
-
-          {/* Test Simulation Button for testing with non-curator role */}
-          {wallet.isConnected && wallet.isCurator && (
-            <button
-              type="button"
-              onClick={() => {
-                useArchiveStore.setState((s) => ({ wallet: { ...s.wallet, isCurator: false } }));
-              }}
-              className="w-full py-2 px-3 rounded-btn bg-surface hover:bg-paper border border-border text-ink-muted text-[11px] font-mono transition-colors"
-            >
-              Uji Coba Sebagai Pengunjung Biasa (Bukan Kurator)
-            </button>
-          )}
-
-          {wallet.isConnected && !wallet.isCurator && (
-            <button
-              type="button"
-              onClick={() => {
-                useArchiveStore.setState((s) => ({ wallet: { ...s.wallet, isCurator: true } }));
-                handleConnectAndLogin(true);
-              }}
-              className="w-full py-2 px-3 rounded-btn bg-sage hover:bg-sage/80 border border-sage-border text-forest text-[11px] font-mono font-semibold transition-colors"
-            >
-              Aktifkan Akses Kurator (Simulasi Demo)
             </button>
           )}
         </div>
@@ -186,7 +160,7 @@ export const WorkspaceLoginPage: React.FC = () => {
 
       {/* Footer */}
       <div className="max-w-4xl w-full mx-auto text-center text-xs font-mono text-ink-muted py-4">
-        Data pada layar ini adalah contoh demonstrasi. Tidak merepresentasikan hasil inferensi, CID, hash, wallet, maupun transaksi aktual.
+        Hak akses workspace divalidasi langsung terhadap role CURATOR_ROLE pada smart contract ArsipFotoVersi.
       </div>
     </div>
   );

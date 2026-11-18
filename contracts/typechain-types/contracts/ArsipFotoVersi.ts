@@ -24,6 +24,28 @@ import type {
 } from "../common";
 
 export declare namespace ArsipFotoVersi {
+  export type PermintaanStruct = {
+    pemohon: AddressLike;
+    parentId: BigNumberish;
+    jumlah: BigNumberish;
+    diajukanPada: BigNumberish;
+    selesai: boolean;
+  };
+
+  export type PermintaanStructOutput = [
+    pemohon: string,
+    parentId: bigint,
+    jumlah: bigint,
+    diajukanPada: bigint,
+    selesai: boolean
+  ] & {
+    pemohon: string;
+    parentId: bigint;
+    jumlah: bigint;
+    diajukanPada: bigint;
+    selesai: boolean;
+  };
+
   export type VersiStruct = {
     parentId: BigNumberish;
     fileHash: BytesLike;
@@ -49,17 +71,24 @@ export interface ArsipFotoVersiInterface extends Interface {
     nameOrSignature:
       | "CURATOR_ROLE"
       | "DEFAULT_ADMIN_ROLE"
+      | "ajukanRestorasi"
       | "approve"
+      | "aturBiaya"
       | "balanceOf"
+      | "biayaRestorasi"
+      | "danaTertahan"
       | "getApproved"
+      | "getPermintaan"
       | "getRoleAdmin"
       | "getVersi"
       | "grantRole"
       | "hasRole"
       | "hashTerpakai"
       | "isApprovedForAll"
+      | "kembalikanBiaya"
       | "name"
       | "nextId"
+      | "nextRequestId"
       | "ownerOf"
       | "renounceRole"
       | "revokeRole"
@@ -68,7 +97,9 @@ export interface ArsipFotoVersiInterface extends Interface {
       | "setApprovalForAll"
       | "supportsInterface"
       | "symbol"
+      | "tarikBiaya"
       | "terbitkanVersi"
+      | "terbitkanVersiRestorasi"
       | "tokenURI"
       | "transferFrom"
   ): FunctionFragment;
@@ -78,7 +109,12 @@ export interface ArsipFotoVersiInterface extends Interface {
       | "Approval"
       | "ApprovalForAll"
       | "BatchMetadataUpdate"
+      | "BiayaDikembalikan"
+      | "BiayaDitarik"
+      | "BiayaDiubah"
       | "MetadataUpdate"
+      | "RestorasiDiajukan"
+      | "RestorasiSelesai"
       | "RoleAdminChanged"
       | "RoleGranted"
       | "RoleRevoked"
@@ -95,15 +131,35 @@ export interface ArsipFotoVersiInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "ajukanRestorasi",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "approve",
     values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "aturBiaya",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "balanceOf",
     values: [AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "biayaRestorasi",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "danaTertahan",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "getApproved",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getPermintaan",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -130,8 +186,16 @@ export interface ArsipFotoVersiInterface extends Interface {
     functionFragment: "isApprovedForAll",
     values: [AddressLike, AddressLike]
   ): string;
+  encodeFunctionData(
+    functionFragment: "kembalikanBiaya",
+    values: [BigNumberish]
+  ): string;
   encodeFunctionData(functionFragment: "name", values?: undefined): string;
   encodeFunctionData(functionFragment: "nextId", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "nextRequestId",
+    values?: undefined
+  ): string;
   encodeFunctionData(
     functionFragment: "ownerOf",
     values: [BigNumberish]
@@ -162,7 +226,15 @@ export interface ArsipFotoVersiInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "symbol", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "tarikBiaya",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "terbitkanVersi",
+    values: [AddressLike, string, BytesLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "terbitkanVersiRestorasi",
     values: [AddressLike, string, BytesLike, BigNumberish]
   ): string;
   encodeFunctionData(
@@ -182,10 +254,27 @@ export interface ArsipFotoVersiInterface extends Interface {
     functionFragment: "DEFAULT_ADMIN_ROLE",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "ajukanRestorasi",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "aturBiaya", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "biayaRestorasi",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "danaTertahan",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getApproved",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getPermintaan",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -203,8 +292,16 @@ export interface ArsipFotoVersiInterface extends Interface {
     functionFragment: "isApprovedForAll",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "kembalikanBiaya",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "nextId", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "nextRequestId",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "ownerOf", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "renounceRole",
@@ -228,8 +325,13 @@ export interface ArsipFotoVersiInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "symbol", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "tarikBiaya", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "terbitkanVersi",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "terbitkanVersiRestorasi",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "tokenURI", data: BytesLike): Result;
@@ -295,11 +397,97 @@ export namespace BatchMetadataUpdateEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace BiayaDikembalikanEvent {
+  export type InputTuple = [
+    requestId: BigNumberish,
+    pemohon: AddressLike,
+    jumlah: BigNumberish
+  ];
+  export type OutputTuple = [
+    requestId: bigint,
+    pemohon: string,
+    jumlah: bigint
+  ];
+  export interface OutputObject {
+    requestId: bigint;
+    pemohon: string;
+    jumlah: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace BiayaDitarikEvent {
+  export type InputTuple = [tujuan: AddressLike, jumlah: BigNumberish];
+  export type OutputTuple = [tujuan: string, jumlah: bigint];
+  export interface OutputObject {
+    tujuan: string;
+    jumlah: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace BiayaDiubahEvent {
+  export type InputTuple = [lama: BigNumberish, baru: BigNumberish];
+  export type OutputTuple = [lama: bigint, baru: bigint];
+  export interface OutputObject {
+    lama: bigint;
+    baru: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace MetadataUpdateEvent {
   export type InputTuple = [_tokenId: BigNumberish];
   export type OutputTuple = [_tokenId: bigint];
   export interface OutputObject {
     _tokenId: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace RestorasiDiajukanEvent {
+  export type InputTuple = [
+    requestId: BigNumberish,
+    parentId: BigNumberish,
+    pemohon: AddressLike,
+    jumlah: BigNumberish
+  ];
+  export type OutputTuple = [
+    requestId: bigint,
+    parentId: bigint,
+    pemohon: string,
+    jumlah: bigint
+  ];
+  export interface OutputObject {
+    requestId: bigint;
+    parentId: bigint;
+    pemohon: string;
+    jumlah: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace RestorasiSelesaiEvent {
+  export type InputTuple = [requestId: BigNumberish, tokenId: BigNumberish];
+  export type OutputTuple = [requestId: bigint, tokenId: bigint];
+  export interface OutputObject {
+    requestId: bigint;
+    tokenId: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -461,15 +649,33 @@ export interface ArsipFotoVersi extends BaseContract {
 
   DEFAULT_ADMIN_ROLE: TypedContractMethod<[], [string], "view">;
 
+  ajukanRestorasi: TypedContractMethod<
+    [parentId: BigNumberish],
+    [bigint],
+    "payable"
+  >;
+
   approve: TypedContractMethod<
     [to: AddressLike, tokenId: BigNumberish],
     [void],
     "nonpayable"
   >;
 
+  aturBiaya: TypedContractMethod<[baru: BigNumberish], [void], "nonpayable">;
+
   balanceOf: TypedContractMethod<[owner: AddressLike], [bigint], "view">;
 
+  biayaRestorasi: TypedContractMethod<[], [bigint], "view">;
+
+  danaTertahan: TypedContractMethod<[], [bigint], "view">;
+
   getApproved: TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
+
+  getPermintaan: TypedContractMethod<
+    [requestId: BigNumberish],
+    [ArsipFotoVersi.PermintaanStructOutput],
+    "view"
+  >;
 
   getRoleAdmin: TypedContractMethod<[role: BytesLike], [string], "view">;
 
@@ -499,9 +705,17 @@ export interface ArsipFotoVersi extends BaseContract {
     "view"
   >;
 
+  kembalikanBiaya: TypedContractMethod<
+    [requestId: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   name: TypedContractMethod<[], [string], "view">;
 
   nextId: TypedContractMethod<[], [bigint], "view">;
+
+  nextRequestId: TypedContractMethod<[], [bigint], "view">;
 
   ownerOf: TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
 
@@ -548,8 +762,21 @@ export interface ArsipFotoVersi extends BaseContract {
 
   symbol: TypedContractMethod<[], [string], "view">;
 
+  tarikBiaya: TypedContractMethod<[tujuan: AddressLike], [void], "nonpayable">;
+
   terbitkanVersi: TypedContractMethod<
     [to: AddressLike, uri: string, fileHash: BytesLike, parentId: BigNumberish],
+    [bigint],
+    "nonpayable"
+  >;
+
+  terbitkanVersiRestorasi: TypedContractMethod<
+    [
+      to: AddressLike,
+      uri: string,
+      fileHash: BytesLike,
+      requestId: BigNumberish
+    ],
     [bigint],
     "nonpayable"
   >;
@@ -573,6 +800,9 @@ export interface ArsipFotoVersi extends BaseContract {
     nameOrSignature: "DEFAULT_ADMIN_ROLE"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "ajukanRestorasi"
+  ): TypedContractMethod<[parentId: BigNumberish], [bigint], "payable">;
+  getFunction(
     nameOrSignature: "approve"
   ): TypedContractMethod<
     [to: AddressLike, tokenId: BigNumberish],
@@ -580,11 +810,27 @@ export interface ArsipFotoVersi extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "aturBiaya"
+  ): TypedContractMethod<[baru: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "balanceOf"
   ): TypedContractMethod<[owner: AddressLike], [bigint], "view">;
   getFunction(
+    nameOrSignature: "biayaRestorasi"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "danaTertahan"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "getApproved"
   ): TypedContractMethod<[tokenId: BigNumberish], [string], "view">;
+  getFunction(
+    nameOrSignature: "getPermintaan"
+  ): TypedContractMethod<
+    [requestId: BigNumberish],
+    [ArsipFotoVersi.PermintaanStructOutput],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "getRoleAdmin"
   ): TypedContractMethod<[role: BytesLike], [string], "view">;
@@ -620,10 +866,16 @@ export interface ArsipFotoVersi extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "kembalikanBiaya"
+  ): TypedContractMethod<[requestId: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "name"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "nextId"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "nextRequestId"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "ownerOf"
@@ -675,9 +927,24 @@ export interface ArsipFotoVersi extends BaseContract {
     nameOrSignature: "symbol"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "tarikBiaya"
+  ): TypedContractMethod<[tujuan: AddressLike], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "terbitkanVersi"
   ): TypedContractMethod<
     [to: AddressLike, uri: string, fileHash: BytesLike, parentId: BigNumberish],
+    [bigint],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "terbitkanVersiRestorasi"
+  ): TypedContractMethod<
+    [
+      to: AddressLike,
+      uri: string,
+      fileHash: BytesLike,
+      requestId: BigNumberish
+    ],
     [bigint],
     "nonpayable"
   >;
@@ -714,11 +981,46 @@ export interface ArsipFotoVersi extends BaseContract {
     BatchMetadataUpdateEvent.OutputObject
   >;
   getEvent(
+    key: "BiayaDikembalikan"
+  ): TypedContractEvent<
+    BiayaDikembalikanEvent.InputTuple,
+    BiayaDikembalikanEvent.OutputTuple,
+    BiayaDikembalikanEvent.OutputObject
+  >;
+  getEvent(
+    key: "BiayaDitarik"
+  ): TypedContractEvent<
+    BiayaDitarikEvent.InputTuple,
+    BiayaDitarikEvent.OutputTuple,
+    BiayaDitarikEvent.OutputObject
+  >;
+  getEvent(
+    key: "BiayaDiubah"
+  ): TypedContractEvent<
+    BiayaDiubahEvent.InputTuple,
+    BiayaDiubahEvent.OutputTuple,
+    BiayaDiubahEvent.OutputObject
+  >;
+  getEvent(
     key: "MetadataUpdate"
   ): TypedContractEvent<
     MetadataUpdateEvent.InputTuple,
     MetadataUpdateEvent.OutputTuple,
     MetadataUpdateEvent.OutputObject
+  >;
+  getEvent(
+    key: "RestorasiDiajukan"
+  ): TypedContractEvent<
+    RestorasiDiajukanEvent.InputTuple,
+    RestorasiDiajukanEvent.OutputTuple,
+    RestorasiDiajukanEvent.OutputObject
+  >;
+  getEvent(
+    key: "RestorasiSelesai"
+  ): TypedContractEvent<
+    RestorasiSelesaiEvent.InputTuple,
+    RestorasiSelesaiEvent.OutputTuple,
+    RestorasiSelesaiEvent.OutputObject
   >;
   getEvent(
     key: "RoleAdminChanged"
@@ -790,6 +1092,39 @@ export interface ArsipFotoVersi extends BaseContract {
       BatchMetadataUpdateEvent.OutputObject
     >;
 
+    "BiayaDikembalikan(uint256,address,uint256)": TypedContractEvent<
+      BiayaDikembalikanEvent.InputTuple,
+      BiayaDikembalikanEvent.OutputTuple,
+      BiayaDikembalikanEvent.OutputObject
+    >;
+    BiayaDikembalikan: TypedContractEvent<
+      BiayaDikembalikanEvent.InputTuple,
+      BiayaDikembalikanEvent.OutputTuple,
+      BiayaDikembalikanEvent.OutputObject
+    >;
+
+    "BiayaDitarik(address,uint256)": TypedContractEvent<
+      BiayaDitarikEvent.InputTuple,
+      BiayaDitarikEvent.OutputTuple,
+      BiayaDitarikEvent.OutputObject
+    >;
+    BiayaDitarik: TypedContractEvent<
+      BiayaDitarikEvent.InputTuple,
+      BiayaDitarikEvent.OutputTuple,
+      BiayaDitarikEvent.OutputObject
+    >;
+
+    "BiayaDiubah(uint256,uint256)": TypedContractEvent<
+      BiayaDiubahEvent.InputTuple,
+      BiayaDiubahEvent.OutputTuple,
+      BiayaDiubahEvent.OutputObject
+    >;
+    BiayaDiubah: TypedContractEvent<
+      BiayaDiubahEvent.InputTuple,
+      BiayaDiubahEvent.OutputTuple,
+      BiayaDiubahEvent.OutputObject
+    >;
+
     "MetadataUpdate(uint256)": TypedContractEvent<
       MetadataUpdateEvent.InputTuple,
       MetadataUpdateEvent.OutputTuple,
@@ -799,6 +1134,28 @@ export interface ArsipFotoVersi extends BaseContract {
       MetadataUpdateEvent.InputTuple,
       MetadataUpdateEvent.OutputTuple,
       MetadataUpdateEvent.OutputObject
+    >;
+
+    "RestorasiDiajukan(uint256,uint256,address,uint256)": TypedContractEvent<
+      RestorasiDiajukanEvent.InputTuple,
+      RestorasiDiajukanEvent.OutputTuple,
+      RestorasiDiajukanEvent.OutputObject
+    >;
+    RestorasiDiajukan: TypedContractEvent<
+      RestorasiDiajukanEvent.InputTuple,
+      RestorasiDiajukanEvent.OutputTuple,
+      RestorasiDiajukanEvent.OutputObject
+    >;
+
+    "RestorasiSelesai(uint256,uint256)": TypedContractEvent<
+      RestorasiSelesaiEvent.InputTuple,
+      RestorasiSelesaiEvent.OutputTuple,
+      RestorasiSelesaiEvent.OutputObject
+    >;
+    RestorasiSelesai: TypedContractEvent<
+      RestorasiSelesaiEvent.InputTuple,
+      RestorasiSelesaiEvent.OutputTuple,
+      RestorasiSelesaiEvent.OutputObject
     >;
 
     "RoleAdminChanged(bytes32,bytes32,bytes32)": TypedContractEvent<

@@ -17,9 +17,10 @@ import { useArchiveStore } from '../store/useArchiveStore';
 import { PhotoCategory, ArchiveItem } from '../types';
 import { PublicArchiveModal } from '../components/PublicArchiveModal';
 import { computeFileSHA256, truncateIdentifier } from '../lib/hash';
+import { predictPhotoCategory } from '../lib/api';
 
 export const PublicPortalPage: React.FC = () => {
-  const { archives, publicTab, setPublicTab, setViewMode, payAndRestoreArchive } = useArchiveStore();
+  const { archives, publicTab, setPublicTab, setViewMode, addArchive, restorationFeeEth } = useArchiveStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -113,23 +114,42 @@ export const PublicPortalPage: React.FC = () => {
     setIsProcessingRestoration(true);
     setRestorationStep(1);
 
-    // Step 1: Wallet signature for 0.01 ETH
-    await new Promise((r) => setTimeout(r, 1000));
-    setRestorationStep(2);
+    let aiCat: PhotoCategory = uploadCategory;
+    let aiConf = 0;
+    let aiNote = `Kategori awal dipilih pengunggah: ${uploadCategory.toUpperCase()}.`;
+    try {
+      const pred = await predictPhotoCategory(uploadFile);
+      aiCat = pred.label;
+      aiConf = pred.confidence;
+      aiNote = `Saran AI (${pred.model_version}): ${pred.label.toUpperCase()} (${(pred.confidence * 100).toFixed(1)}%). Menunggu tinjauan kurator.`;
+    } catch {
+      // Fallback ke kategori manual bila backend AI tidak aktif
+    }
 
-    // Step 2: Contract execution and AI Super-Resolution pipeline
-    const res = await payAndRestoreArchive({
-      title: uploadTitle.trim(),
-      creator: uploadCreator.trim(),
-      source: uploadSource.trim(),
-      licenseInfo: uploadLicense.trim(),
-      category: uploadCategory,
-      fileHash: uploadHash,
-      imageUrl: uploadPreview || undefined,
-    });
+    setRestorationStep(2);
+    const archiveId = addArchive(
+      {
+        title: uploadTitle.trim(),
+        creator: uploadCreator.trim(),
+        source: uploadSource.trim(),
+        licenseInfo: uploadLicense.trim(),
+        initialCategory: aiCat,
+        finalCategory: uploadCategory,
+        status: 'menunggu_tinjauan',
+        aiPrediction: {
+          category: aiCat,
+          confidence: aiConf,
+          advisoryNote: aiNote,
+        },
+        curatorNotes: 'Diajukan melalui portal publik, menunggu peninjauan dan penerbitan kurator.',
+        originalHash: uploadHash,
+        originalCid: `bafybei${uploadHash.substring(0, 16)}draft`,
+      },
+      uploadPreview || undefined
+    );
 
     setRestorationStep(3);
-    setRestorationSuccess({ archiveId: res.archiveId, txHash: res.txHash });
+    setRestorationSuccess({ archiveId, txHash: 'Menunggu penerbitan kurator on-chain' });
     setIsProcessingRestoration(false);
   };
 
@@ -318,18 +338,18 @@ export const PublicPortalPage: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 2: UNGGAH & RESTORASI MANDIRI (0.01 ETH) */}
+        {/* TAB 2: UNGGAH PENGAJUAN ARSIP */}
         {publicTab === 'unggah_restorasi' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="space-y-2 text-center">
               <span className="px-3 py-1 rounded-btn bg-brass-light border border-brass-border text-xs font-mono font-bold text-brass-text">
-                Layanan Publik Mandiri · Biaya 0.01 ETH
+                Pengajuan Arsip Baru · Restorasi Berbayar ({restorationFeeEth ? `${restorationFeeEth} ETH` : 'Sesuai Kontrak'}) Setelah Terbit
               </span>
               <h2 className="text-2xl sm:text-3xl font-display font-bold text-ink">
-                Unggah Foto Berizin & Jalankan Restorasi AI
+                Unggah Foto Berizin ke Antrean Kurasi
               </h2>
               <p className="text-xs md:text-sm text-ink-muted max-w-2xl mx-auto leading-relaxed">
-                Masyarakat umum dapat mengunggah foto arsip berizin untuk ditingkatkan resolusinya dengan model AI Super-Resolution x4. Pembayaran 0.01 ETH diverifikasi langsung ke smart contract sebelum foto masuk antrean kurasi.
+                Foto baru diajukan terlebih dahulu untuk ditinjau kurator dan dicatat on-chain. Setelah memiliki Token ID on-chain, pemohon dapat mengajukan restorasi berbayar melalui halaman Detail Arsip.
               </p>
             </div>
 
@@ -347,10 +367,10 @@ export const PublicPortalPage: React.FC = () => {
                 </div>
                 <div className="space-y-2 max-w-md mx-auto">
                   <h3 className="text-xl font-display font-bold text-ink">
-                    Pembayaran Berhasil & Foto Berhasil Direstorasi!
+                    Pengajuan Arsip Berhasil Dicatat di Antrean!
                   </h3>
                   <p className="text-xs text-ink-muted leading-relaxed font-sans">
-                    Biaya restorasi 0.01 ETH telah diterima oleh smart contract. Arsip baru telah dibuat dan kini menunggu tinjauan kurator untuk diterbitkan sebagai token resmi.
+                    Arsip baru telah dibuat dan menunggu peninjauan kurator untuk dicatat on-chain sebelum dapat diajukan restorasi berbayar.
                   </p>
                 </div>
 
@@ -359,12 +379,8 @@ export const PublicPortalPage: React.FC = () => {
                     <span className="text-ink-muted">ID Arsip Baru:</span>
                     <span className="font-bold text-forest">{restorationSuccess.archiveId}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-ink-muted">Biaya Layanan:</span>
-                    <span className="font-bold text-ink">0.01 ETH</span>
-                  </div>
                   <div className="space-y-1">
-                    <span className="text-ink-muted">Hash Transaksi On-Chain:</span>
+                    <span className="text-ink-muted">Status On-Chain:</span>
                     <p className="text-[11px] text-ink select-all break-all">{restorationSuccess.txHash}</p>
                   </div>
                 </div>
@@ -548,19 +564,16 @@ export const PublicPortalPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Bagian 3: Pembayaran On-Chain 0.01 ETH */}
+                {/* Bagian 3: Kirim Pengajuan ke Antrean Kurasi */}
                 <div className="bg-surface border border-border rounded-card p-6 space-y-4 shadow-subtle">
                   <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-border">
                     <div className="space-y-0.5">
                       <h3 className="text-base font-display font-bold text-ink">
-                        Layanan Restorasi AI (Super-Resolution x4)
+                        Praklasifikasi AI & Pengiriman Pengajuan
                       </h3>
                       <p className="text-xs text-ink-muted font-sans">
-                        Meningkatkan ketajaman foto tanpa menimpa berkas asli dan mencatat bukti versi di blockchain.
+                        Foto diperiksa hash SHA-256 dan diklasifikasi AI sebelum masuk tinjauan kurator.
                       </p>
-                    </div>
-                    <div className="px-3 py-1.5 rounded-btn bg-brass-light border border-brass-border font-mono text-brass-text font-bold text-sm">
-                      Biaya: 0.01 ETH
                     </div>
                   </div>
 
@@ -568,17 +581,14 @@ export const PublicPortalPage: React.FC = () => {
                     <div className="p-4 rounded-btn bg-paper border border-border space-y-3 font-mono text-xs">
                       <div className="flex items-center gap-2 font-sans font-semibold text-ink">
                         <Loader2 className="w-4 h-4 animate-spin text-forest" />
-                        <span>Memproses Transaksi & Model AI:</span>
+                        <span>Memproses Pengajuan:</span>
                       </div>
                       <div className="space-y-1.5 pl-6">
                         <p className={restorationStep >= 1 ? 'text-forest font-semibold' : 'text-ink-muted'}>
-                          1. Meminta tanda tangan pembayaran 0.01 ETH via MetaMask
+                          1. Memanggil layanan klasifikasi AI (/predict)
                         </p>
                         <p className={restorationStep >= 2 ? 'text-forest font-semibold' : 'text-ink-muted'}>
-                          2. Menjalankan inferensi model Super-Resolution pralatih x4
-                        </p>
-                        <p className={restorationStep >= 3 ? 'text-forest font-semibold' : 'text-ink-muted'}>
-                          3. Mencatat versi turunan dan memasukkan ke antrean kurator
+                          2. Menyimpan pengajuan ke antrean kurator
                         </p>
                       </div>
                     </div>
@@ -597,13 +607,13 @@ export const PublicPortalPage: React.FC = () => {
                     ) : (
                       <>
                         <Wallet className="w-4 h-4" />
-                        <span>Bayar 0.01 ETH & Jalankan Restorasi</span>
+                        <span>Ajukan Foto ke Antrean Kurasi</span>
                       </>
                     )}
                   </button>
 
                   <p className="text-center text-[11px] font-mono text-ink-muted">
-                    Transaksi diproses melalui jaringan Ethereum Sepolia Testnet (saldo latihan gratis, bukan uang riil).
+                    Pembayaran restorasi on-chain ({restorationFeeEth ? `${restorationFeeEth} ETH` : 'sesuai kontrak'}) dilakukan setelah foto memiliki Token ID on-chain.
                   </p>
                 </div>
               </form>

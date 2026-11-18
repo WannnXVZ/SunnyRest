@@ -112,6 +112,15 @@ describe("Uji Penerbitan Versi (Penerbitan Test)", function () {
     ).to.be.revertedWithCustomError(kontrak, "AlamatPenerimaNol");
   });
 
+  it("Kasus Tambahan: Constructor saat initialCurator sama dengan deployer", async function () {
+    const ArsipFotoVersiFactory = await ethers.getContractFactory("ArsipFotoVersi");
+    const kontrakSama = await ArsipFotoVersiFactory.deploy(admin.address);
+    await kontrakSama.waitForDeployment();
+
+    const curatorRole = await kontrakSama.CURATOR_ROLE();
+    expect(await kontrakSama.hasRole(curatorRole, admin.address)).to.be.true;
+  });
+
   it("Kasus Tambahan: Mendukung supportsInterface ERC-721 dan AccessControl", async function () {
     expect(await kontrak.supportsInterface("0x80ac58cd")).to.be.true;
     expect(await kontrak.supportsInterface("0x7965db0b")).to.be.true;

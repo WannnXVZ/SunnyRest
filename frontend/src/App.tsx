@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { AppNavbar } from './components/AppNavbar';
 import { Sidebar } from './components/Sidebar';
@@ -17,7 +17,13 @@ import { OverviewPage } from './pages/OverviewPage';
 
 export const App: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { activePage, setActivePage, viewMode, setViewMode, isWorkspaceAuthenticated } = useArchiveStore();
+  const { activePage, setActivePage, viewMode, setViewMode, isWorkspaceAuthenticated, initWalletSync } =
+    useArchiveStore();
+
+  useEffect(() => {
+    const unsubscribe = initWalletSync();
+    return () => unsubscribe();
+  }, [initWalletSync]);
 
   const renderActivePage = () => {
     // 1. SISI PUBLIK (Hanya halaman publik yang boleh diakses)

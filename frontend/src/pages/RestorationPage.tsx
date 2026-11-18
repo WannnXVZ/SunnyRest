@@ -5,11 +5,12 @@ import { PhotoCategory } from '../types';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
 export const RestorationPage: React.FC = () => {
-  const { archives, selectedArchiveId, setSelectedArchiveId, runSuperResolutionForArchive, updateArchiveStatus } =
+  const { archives, selectedArchiveId, setSelectedArchiveId, requestPaidRestoration, updateArchiveStatus, restorationFeeEth } =
     useArchiveStore();
 
   const selectedArchive = archives.find((a) => a.id === selectedArchiveId) || archives[0];
   const [isRunningSR, setIsRunningSR] = useState(false);
+  const [srError, setSrError] = useState<string | null>(null);
   const [manualCategory, setManualCategory] = useState<PhotoCategory>(selectedArchive?.finalCategory || 'bangunan');
 
   const originalVersion = selectedArchive?.versions.find((v) => v.versionType === 'original') || selectedArchive?.versions[0];
@@ -18,8 +19,11 @@ export const RestorationPage: React.FC = () => {
   const handleRunSR = async () => {
     if (!selectedArchive) return;
     setIsRunningSR(true);
-    await new Promise((resolve) => setTimeout(resolve, 1800));
-    await runSuperResolutionForArchive(selectedArchive.id);
+    setSrError(null);
+    const res = await requestPaidRestoration(selectedArchive.id);
+    if (!res.success && res.error) {
+      setSrError(res.error);
+    }
     setIsRunningSR(false);
   };
 
@@ -147,12 +151,20 @@ export const RestorationPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-display font-bold text-ink">Super-resolution</p>
-                <p className="text-xs text-ink-muted">Model pralatih x4 untuk restorasi visual</p>
+                <p className="text-xs text-ink-muted">
+                  Model pralatih x4 ({restorationFeeEth ? `Biaya kontrak ${restorationFeeEth} ETH` : 'Perlu terbit on-chain'})
+                </p>
               </div>
               <span className="text-[11px] font-mono px-2 py-0.5 rounded-btn bg-paper border border-border text-ink-muted">
                 {derivativeVersion ? 'Sudah dijalankan' : 'Belum dijalankan'}
               </span>
             </div>
+
+            {srError && (
+              <div className="p-3 rounded-btn bg-status-dangerBg border border-border text-xs text-status-danger">
+                {srError}
+              </div>
+            )}
 
             <button
               type="button"

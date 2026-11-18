@@ -1,4 +1,4 @@
-﻿# Byte-compiled / optimized / DLL files
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
@@ -231,12 +231,15 @@ frontend/dist/
 contracts/artifacts/
 contracts/cache/
 contracts/coverage/
+contracts/typechain-types/
 coverage.json
 .vite/
 
 # Large datasets & model binaries (keep manifests & small samples only)
 data/raw/
 data/processed/
+backend/ml/data/raw/
+backend/ml/data/classification/
 backend/models/*.pt
 backend/models/*.pth
 backend/models/*.h5

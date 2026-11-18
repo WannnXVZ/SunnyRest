@@ -9,9 +9,10 @@ export const AppNavbar: React.FC = () => {
     setActivePage,
     wallet,
     switchNetwork,
-    toggleRole,
+    connectWallet,
     setViewMode,
     isWorkspaceAuthenticated,
+    restorationFeeEth,
   } = useArchiveStore();
 
   const navItems: { page: 'arsip' | 'unggah' | 'verifikasi'; label: string }[] = [
@@ -22,11 +23,14 @@ export const AppNavbar: React.FC = () => {
 
   return (
     <div className="sticky top-0 z-40 bg-surface">
-      {/* Top Demo Notice Strip from Reference Designs */}
+      {/* Top Status Strip */}
       <div className="bg-paper border-b border-border/80 px-4 md:px-8 py-1.5 flex items-center justify-between text-[11px] font-mono text-ink-muted">
-        <span>Mode demo · Data contoh</span>
+        <span>
+          Jaringan: {wallet.chainName} ({wallet.chainId})
+          {restorationFeeEth ? ` · Biaya Restorasi: ${restorationFeeEth} ETH` : ''}
+        </span>
         <span className="hidden sm:inline">
-          Tidak ada publikasi atau transaksi nyata · Izin contoh belum diverifikasi
+          Transaksi & verifikasi hak akses ditegakkan oleh kontrak ArsipFotoVersi
         </span>
       </div>
 
@@ -73,7 +77,7 @@ export const AppNavbar: React.FC = () => {
 
         {/* Right: Network Badges & Wallet Chip */}
         <div className="flex items-center gap-2 sm:gap-3 text-xs font-mono">
-          {/* Network: Lokal · simulasi */}
+          {/* Network switcher */}
           <button
             type="button"
             onClick={() => switchNetwork(wallet.chainId === 11155111 ? 31337 : 11155111)}
@@ -85,30 +89,31 @@ export const AppNavbar: React.FC = () => {
                 wallet.chainId === 31337 ? 'bg-gold' : 'bg-forest'
               }`}
             />
-            <span>{wallet.chainId === 31337 ? 'Lokal · simulasi' : 'Sepolia'}</span>
+            <span>{wallet.chainId === 31337 ? 'Hardhat Lokal' : 'Sepolia'}</span>
           </button>
 
-          {/* Network: Sepolia Status */}
-          <span className="hidden lg:inline text-ink-muted text-[11px]">
-            {wallet.chainId === 11155111 ? 'Sepolia: terhubung' : 'Sepolia: terputus'}
-          </span>
-
-          {/* Wallet / Role Badge */}
+          {/* Wallet Badge */}
           <button
             type="button"
-            onClick={toggleRole}
-            title="Klik untuk beralih peran (Kreator / Kurator)"
+            onClick={() => {
+              if (!wallet.isConnected) {
+                void connectWallet();
+              }
+            }}
+            title={wallet.isConnected ? 'Alamat wallet terhubung' : 'Hubungkan MetaMask'}
             className="flex items-center gap-2 px-3 py-1.5 rounded-btn bg-paper border border-border hover:border-forest text-ink transition-colors min-h-[36px]"
           >
             <Wallet className="w-3.5 h-3.5 text-ink-muted" />
             <span className="font-semibold text-ink">
               {wallet.address
                 ? truncateIdentifier(wallet.address, 4, 4)
-                : '0x7A...91C2'}
+                : 'Hubungkan Wallet'}
             </span>
-            <span className="hidden md:inline text-ink-muted text-[11px]">
-              {wallet.isCurator ? 'Kurator · akun contoh' : 'Kreator · akun contoh'}
-            </span>
+            {wallet.isConnected && (
+              <span className="hidden md:inline text-ink-muted text-[11px]">
+                {wallet.isCurator ? 'Kurator On-Chain' : 'Pemohon'}
+              </span>
+            )}
           </button>
 
           {/* Workspace Kurator Gate Button */}
