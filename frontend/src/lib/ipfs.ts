@@ -1,75 +1,112 @@
-const IPFS_API_URL = import.meta.env.VITE_IPFS_API_URL || '';
-const PINATA_JWT = import.meta.env.VITE_PINATA_JWT || '';
-export const IPFS_GATEWAY =
-  import.meta.env.VITE_IPFS_GATEWAY || 'http://127.0.0.1:8080/ipfs/';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-export interface IpfsUploadResult {
-  metadataUri: string;
+const rawGateway =
+  import.meta.env.VITE_IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs/';
+export const IPFS_GATEWAY = rawGateway.endsWith('/')
+  ? rawGateway
+  : `${rawGateway}/`;
+
+export interface IpfsPinResult {
   cid: string;
-  pinned: boolean;
-  strategy: 'pinata' | 'local-kubo' | 'draft-uri';
+  uri: string;
+  gatewayUrl: string;
+  strategy: 'pinata' | 'local-kubo';
 }
 
-export async function uploadMetadataToIpfs(
-  metadata: Record<string, unknown>,
-  fallbackSeed: string
-): Promise<IpfsUploadResult> {
-  const jsonBlob = new Blob([JSON.stringify(metadata, null, 2)], {
-    type: 'application/json',
+export function resolveIpfsUrl(uriOrCid: string): string {
+  const clean = (uriOrCid || '').trim();
+  if (!clean) return '';
+  if (
+    clean.startsWith('http://') ||
+    clean.startsWith('https://') ||
+    clean.startsWith('blob:') ||
+    clean.startsWith('data:') ||
+    clean.startsWith('/')
+  ) {
+    return clean;
+  }
+  if (clean.startsWith('ipfs://')) {
+    const pathPart = clean.slice('ipfs://'.length).replace(/^ipfs\//i, '');
+    return `${IPFS_GATEWAY}${pathPart}`;
+  }
+  return `${IPFS_GATEWAY}${clean}`;
+}
+
+async function parseIpfsError(res: Response): Promise<string> {
+  try {
+    const data = await res.json();
+    if (data?.detail) return String(data.detail);
+  } catch {
+    // Non-JSON response
+  }
+  return `Layanan pinning IPFS gagal (HTTP ${res.status}). Pastikan PINATA_JWT atau IPFS_API_URL dikonfigurasi di backend.`;
+}
+
+export async function pinFileToIpfs(
+  file: Blob | File,
+  filename: string
+): Promise<IpfsPinResult> {
+  const formData = new FormData();
+  formData.append('file', file, filename);
+
+  const res = await fetch(`${API_BASE_URL}/ipfs/pin-file`, {
+    method: 'POST',
+    body: formData,
   });
 
-  // 1. Prioritas Pinata JWT jika dikonfigurasi
-  if (PINATA_JWT) {
-    const formData = new FormData();
-    formData.append('file', jsonBlob, 'metadata.json');
-    const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${PINATA_JWT}` },
-      body: formData,
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const cid = data.IpfsHash as string;
-      return {
-        cid,
-        metadataUri: `ipfs://${cid}`,
-        pinned: true,
-        strategy: 'pinata',
-      };
-    }
+  if (!res.ok) {
+    throw new Error(await parseIpfsError(res));
   }
 
-  // 2. Node IPFS lokal (Kubo HTTP API /api/v0/add) jika aktif
-  if (IPFS_API_URL) {
-    try {
-      const formData = new FormData();
-      formData.append('file', jsonBlob, 'metadata.json');
-      const res = await fetch(`${IPFS_API_URL}/api/v0/add?pin=true`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const cid = data.Hash as string;
-        return {
-          cid,
-          metadataUri: `ipfs://${cid}`,
-          pinned: true,
-          strategy: 'local-kubo',
-        };
-      }
-    } catch {
-      // Fallback ke draft URI lokal bila node IPFS tidak berjalan
-    }
-  }
-
-  // 3. Fallback jujur bila node IPFS tidak dijalankan saat uji kontrak lokal
-  const shortHash = fallbackSeed.replace(/^0x/i, '').slice(0, 32);
-  const draftCid = `bafybeidraft${shortHash}`;
+  const data = await res.json();
   return {
-    cid: draftCid,
-    metadataUri: `ipfs://${draftCid}/metadata.json`,
-    pinned: false,
-    strategy: 'draft-uri',
+    cid: data.cid as string,
+    uri: data.uri as string,
+    gatewayUrl: data.gateway_url as string,
+    strategy: data.strategy as 'pinata' | 'local-kubo',
   };
+}
+
+export async function pinMetadataToIpfs(
+  metadata: Record<string, unknown>,
+  filename = 'metadata.json'
+): Promise<IpfsPinResult> {
+  const res = await fetch(`${API_BASE_URL}/ipfs/pin-json`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ metadata, filename }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseIpfsError(res));
+  }
+
+  const data = await res.json();
+  return {
+    cid: data.cid as string,
+    uri: data.uri as string,
+    gatewayUrl: data.gateway_url as string,
+    strategy: data.strategy as 'pinata' | 'local-kubo',
+  };
+}
+
+export async function fetchIpfsJson<T = Record<string, unknown>>(
+  uriOrCid: string,
+  timeoutMs = 6000
+): Promise<T | null> {
+  const url = resolveIpfsUrl(uriOrCid);
+  if (!url) return null;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }

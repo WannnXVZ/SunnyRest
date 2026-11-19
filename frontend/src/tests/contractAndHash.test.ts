@@ -3,19 +3,32 @@ import { Interface, parseEther } from 'ethers';
 import ArsipFotoVersiABI from '../abi/ArsipFotoVersi.json';
 import { NETWORKS, DEFAULT_CHAIN_ID } from '../config/networks';
 import { truncateIdentifier } from '../lib/hash';
-import { normalizeBytes32Hash, parseContractError } from '../lib/contract';
+import {
+  normalizeBytes32Hash,
+  normalizeHexHash,
+  parseContractError,
+} from '../lib/contract';
+import { IPFS_GATEWAY, resolveIpfsUrl } from '../lib/ipfs';
 
-describe('Utilitas Hash, Konfigurasi Jaringan & Parser Error Kontrak', () => {
+describe('Utilitas Hash, IPFS URL, Konfigurasi Jaringan & Parser Error Kontrak', () => {
   it('truncateIdentifier memotong hash panjang dan mempertahankan hash pendek', () => {
     const full = '0x1234567890abcdef1234567890abcdef12345678';
     expect(truncateIdentifier(full, 6, 4)).toBe('0x1234...5678');
     expect(truncateIdentifier('0x1234', 6, 4)).toBe('0x1234');
   });
 
-  it('normalizeBytes32Hash menormalkan hex SHA-256 64 karakter ke bytes32', () => {
+  it('normalizeHexHash dan normalizeBytes32Hash menormalkan SHA-256 secara konsisten', () => {
     const rawHex = '4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a';
+    expect(normalizeHexHash(`0x${rawHex.toUpperCase()}`)).toBe(rawHex);
     expect(normalizeBytes32Hash(rawHex)).toBe(`0x${rawHex}`);
     expect(normalizeBytes32Hash(`0x${rawHex.toUpperCase()}`)).toBe(`0x${rawHex}`);
+  });
+
+  it('resolveIpfsUrl mengonversi URI ipfs:// dan CID mentah menjadi URL gateway serta mempertahankan URL HTTP/relatif', () => {
+    expect(resolveIpfsUrl('ipfs://bafybeitest123')).toBe(`${IPFS_GATEWAY}bafybeitest123`);
+    expect(resolveIpfsUrl('bafybeitest123')).toBe(`${IPFS_GATEWAY}bafybeitest123`);
+    expect(resolveIpfsUrl('/storage/files/abc.png')).toBe('/storage/files/abc.png');
+    expect(resolveIpfsUrl('https://example.com/a.jpg')).toBe('https://example.com/a.jpg');
   });
 
   it('parseContractError menerjemahkan penolakan MetaMask, saldo kurang, dan custom error Solidity', () => {

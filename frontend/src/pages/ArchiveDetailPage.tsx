@@ -12,10 +12,21 @@ import {
   X,
   Shield,
   AlertTriangle,
+  ImageOff,
 } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
-import { truncateIdentifier } from '../lib/hash';
+import { NETWORKS } from '../config/networks';
+import { computeFileSHA256, truncateIdentifier } from '../lib/hash';
+import { fetchVersiOnChain, normalizeHexHash } from '../lib/contract';
+import { resolveMediaUrl } from '../lib/api';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
+
+interface IntegrityCheckState {
+  status: 'idle' | 'match_onchain' | 'match_local' | 'mismatch' | 'error';
+  message: string;
+  computedHash?: string;
+  onChainHash?: string;
+}
 
 export const ArchiveDetailPage: React.FC = () => {
   const {
@@ -31,9 +42,15 @@ export const ArchiveDetailPage: React.FC = () => {
 
   const archive = archives.find((a) => a.id === selectedArchiveId) || archives[0];
   const [isVerifying, setIsVerifying] = useState(false);
+  const [integrityCheck, setIntegrityCheck] = useState<IntegrityCheckState>({
+    status: 'idle',
+    message: '',
+  });
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [restoreStage, setRestoreStage] = useState<'idle' | 'waiting_wallet' | 'waiting_confirmation' | 'enhancing'>('idle');
+  const [restoreStage, setRestoreStage] = useState<
+    'idle' | 'pinning_ipfs' | 'waiting_wallet' | 'waiting_confirmation' | 'enhancing'
+  >('idle');
   const [restoredSuccessMsg, setRestoredSuccessMsg] = useState<string | null>(null);
   const [restoreErrorMsg, setRestoreErrorMsg] = useState<string | null>(null);
 
@@ -41,10 +58,14 @@ export const ArchiveDetailPage: React.FC = () => {
     void refreshRestorationFee();
   }, [refreshRestorationFee, wallet.chainId]);
 
+  useEffect(() => {
+    setIntegrityCheck({ status: 'idle', message: '' });
+  }, [archive?.id]);
+
   if (!archive) {
     return (
       <div className="p-12 text-center max-w-xl mx-auto space-y-4">
-        <p className="text-sm font-mono text-ink-muted">Arsip tidak ditemukan.</p>
+        <p className="text-sm font-mono text-ink-muted">Arsip tidak ditemukan atau daftar arsip masih kosong.</p>
         <button
           type="button"
           onClick={() => setActivePage('arsip')}
@@ -61,6 +82,9 @@ export const ArchiveDetailPage: React.FC = () => {
   const derivativeVersion = archive.versions.find((v) => v.versionType === 'derivative');
   const isOriginalOnChain = Boolean(originalVersion?.onChainTokenId);
   const feeDisplay = restorationFeeEth ? `${restorationFeeEth} ETH` : 'Belum tersinkronisasi';
+  const origImgSrc = originalVersion?.imageUrl ? resolveMediaUrl(originalVersion.imageUrl) : '';
+  const derivImgSrc = derivativeVersion?.imageUrl ? resolveMediaUrl(derivativeVersion.imageUrl) : '';
+  const activeNet = NETWORKS[wallet.chainId];
 
   const handleCreateRestoration = () => {
     setRestoreErrorMsg(null);
@@ -90,7 +114,7 @@ export const ArchiveDetailPage: React.FC = () => {
           res.txHash || '',
           10,
           8
-        )}.`
+        )}. Kurator dapat menerbitkan versi turunan ini on-chain di halaman Peninjauan Kurator.`
       );
     } else {
       setRestoreErrorMsg(res.error || 'Pembayaran on-chain atau layanan SR gagal.');
@@ -98,14 +122,79 @@ export const ArchiveDetailPage: React.FC = () => {
   };
 
   const handleVerifyAgain = async () => {
+    if (!originalVersion) return;
     setIsVerifying(true);
-    await new Promise((r) => setTimeout(r, 400));
-    setIsVerifying(false);
+    setIntegrityCheck({ status: 'idle', message: 'Mengunduh berkas dan menghitung SHA-256...' });
+
+    try {
+      const targetUrl = resolveMediaUrl(originalVersion.imageUrl);
+      if (!targetUrl) {
+        setIntegrityCheck({
+          status: 'error',
+          message: 'URL media tidak tersedia atau gateway IPFS belum menyediakan berkas ini.',
+        });
+        return;
+      }
+
+      const res = await fetch(targetUrl);
+      if (!res.ok) {
+        setIntegrityCheck({
+          status: 'error',
+          message: `Berkas media gagal diambil (HTTP ${res.status}). Pastikan gateway IPFS atau server backend berjalan.`,
+        });
+        return;
+      }
+
+      const blob = await res.blob();
+      const computed = normalizeHexHash(await computeFileSHA256(blob));
+      const localExpected = normalizeHexHash(originalVersion.fileHash);
+
+      if (originalVersion.onChainTokenId) {
+        const onChain = await fetchVersiOnChain(wallet.chainId, originalVersion.onChainTokenId);
+        const chainHash = normalizeHexHash(onChain.fileHash);
+        if (computed === chainHash) {
+          setIntegrityCheck({
+            status: 'match_onchain',
+            message: `Terverifikasi: SHA-256 berkas (${truncateIdentifier(computed, 10, 8)}) cocok 100% dengan catatan smart contract Token #${originalVersion.onChainTokenId}.`,
+            computedHash: computed,
+            onChainHash: chainHash,
+          });
+        } else {
+          setIntegrityCheck({
+            status: 'mismatch',
+            message: `PERINGATAN INTEGRITAS: SHA-256 berkas terhitung (${truncateIdentifier(computed, 10, 8)}) TIDAK cocok dengan hash kontrak (${truncateIdentifier(chainHash, 10, 8)})!`,
+            computedHash: computed,
+            onChainHash: chainHash,
+          });
+        }
+      } else if (computed === localExpected) {
+        setIntegrityCheck({
+          status: 'match_local',
+          message: `SHA-256 berkas (${truncateIdentifier(computed, 10, 8)}) cocok dengan arsip antrean backend (belum tercatat on-chain).`,
+          computedHash: computed,
+        });
+      } else {
+        setIntegrityCheck({
+          status: 'mismatch',
+          message: `PERINGATAN: SHA-256 berkas terhitung tidak cocok dengan metadata antrean (${truncateIdentifier(localExpected, 10, 8)})!`,
+          computedHash: computed,
+        });
+      }
+    } catch (err) {
+      setIntegrityCheck({
+        status: 'error',
+        message:
+          err instanceof Error
+            ? `Verifikasi gagal: ${err.message}`
+            : 'Gagal melakukan verifikasi ulang integritas berkas.',
+      });
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
-      {/* Top Breadcrumb Navigation */}
       <div>
         <button
           type="button"
@@ -133,17 +222,18 @@ export const ArchiveDetailPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Action Buttons Top Right */}
         <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-          <a
-            href={originalVersion.imageUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-btn bg-surface hover:bg-paper border border-border text-xs font-semibold text-ink shadow-subtle min-h-[38px] transition-colors"
-          >
-            <Download className="w-3.5 h-3.5 text-ink-muted" />
-            <span>Unduh asli</span>
-          </a>
+          {origImgSrc && (
+            <a
+              href={origImgSrc}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-btn bg-surface hover:bg-paper border border-border text-xs font-semibold text-ink shadow-subtle min-h-[38px] transition-colors"
+            >
+              <Download className="w-3.5 h-3.5 text-ink-muted" />
+              <span>Unduh asli</span>
+            </a>
+          )}
 
           <button
             type="button"
@@ -188,9 +278,8 @@ export const ArchiveDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Side-by-Side Image Comparison Cards */}
+      {/* Side-by-Side Image Comparison */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Card 1: Foto Asli */}
         <div className="bg-surface border border-border rounded-card overflow-hidden shadow-card flex flex-col justify-between">
           <div className="p-3.5 border-b border-border flex items-center justify-between text-xs font-mono">
             <span className="font-semibold text-ink">Foto asli</span>
@@ -200,24 +289,30 @@ export const ArchiveDetailPage: React.FC = () => {
           </div>
 
           <div className="relative aspect-[4/3] bg-paper overflow-hidden flex items-center justify-center">
-            <img
-              src={originalVersion.imageUrl}
-              alt={archive.title}
-              className="w-full h-full object-cover"
-            />
+            {origImgSrc ? (
+              <img
+                src={origImgSrc}
+                alt={archive.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-center text-xs font-mono text-ink-muted p-6 space-y-2">
+                <ImageOff className="w-6 h-6 mx-auto opacity-50" />
+                <span>Media tidak ditemukan</span>
+              </div>
+            )}
           </div>
 
           <div className="p-3.5 border-t border-border bg-paper/50 flex items-center justify-between text-[11px] font-mono text-ink-muted">
-            <span>Versi sumber asli</span>
+            <span>{originalVersion?.dimensions || 'Versi sumber asli'}</span>
             <span>
-              {originalVersion.onChainTokenId
+              {originalVersion?.onChainTokenId
                 ? `Token #${originalVersion.onChainTokenId}`
                 : 'Belum dicatat on-chain'}
             </span>
           </div>
         </div>
 
-        {/* Card 2: Restorasi x4 */}
         <div className="bg-surface border border-border rounded-card overflow-hidden shadow-card flex flex-col justify-between">
           <div className="p-3.5 border-b border-border flex items-center justify-between text-xs font-mono">
             <span className="font-semibold text-ink">Restorasi Super-Resolution x4</span>
@@ -227,9 +322,9 @@ export const ArchiveDetailPage: React.FC = () => {
           </div>
 
           <div className="relative aspect-[4/3] bg-paper overflow-hidden flex items-center justify-center">
-            {derivativeVersion ? (
+            {derivImgSrc ? (
               <img
-                src={derivativeVersion.imageUrl}
+                src={derivImgSrc}
                 alt={`${archive.title} - Restorasi x4`}
                 className="w-full h-full object-cover"
               />
@@ -258,7 +353,7 @@ export const ArchiveDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Yellow Advisory Callout Banner */}
+      {/* Advisory Callout */}
       <div className="p-4 rounded-card bg-gold-light border border-gold-border space-y-1 text-ink">
         <div className="flex items-center gap-2 text-xs font-bold">
           <Info className="w-4 h-4 text-ink flex-shrink-0" />
@@ -271,11 +366,10 @@ export const ArchiveDetailPage: React.FC = () => {
 
       {/* 2-Column Info Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column: Metadata & Token Identity */}
         <div className="space-y-6">
           <div className="bg-surface border border-border rounded-card p-6 space-y-4 shadow-subtle">
             <h2 className="font-display font-bold text-base text-ink">
-              Sumber & hak penggunaan
+              Sumber &amp; hak penggunaan
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-sans">
@@ -296,7 +390,9 @@ export const ArchiveDetailPage: React.FC = () => {
 
               <div>
                 <p className="text-ink-muted text-[11px] font-mono">Rujukan sumber</p>
-                <p className="text-ink font-medium mt-0.5">Catatan koleksi {archive.id}</p>
+                <p className="text-ink font-medium mt-0.5">
+                  {archive.sourceRef || `Catatan koleksi ${archive.id}`}
+                </p>
               </div>
             </div>
 
@@ -314,53 +410,65 @@ export const ArchiveDetailPage: React.FC = () => {
               <div>
                 <p className="text-ink-muted text-[11px] font-mono">Status on-chain</p>
                 <p className="text-ink font-mono font-medium mt-0.5">
-                  {originalVersion.onChainVerified ? 'Tercatat & terverifikasi' : 'Belum diterbitkan ke kontrak'}
+                  {originalVersion?.onChainVerified ? 'Tercatat & terverifikasi' : 'Belum diterbitkan ke kontrak'}
                 </p>
               </div>
 
               <div>
                 <p className="text-ink-muted text-[11px] font-mono">Kategori final / kurator</p>
-                <p className="text-ink font-medium mt-0.5 capitalize">
-                  {archive.finalCategory}
-                </p>
+                <p className="text-ink font-medium mt-0.5 capitalize">{archive.finalCategory}</p>
               </div>
 
               <div>
                 <p className="text-ink-muted text-[11px] font-mono">Jaringan / tokenId</p>
                 <p className="text-ink font-mono mt-0.5">
                   {wallet.chainName} /{' '}
-                  {originalVersion.onChainTokenId
-                    ? `#${originalVersion.onChainTokenId}`
-                    : 'Belum ada'}
+                  {originalVersion?.onChainTokenId ? `#${originalVersion.onChainTokenId}` : 'Belum ada'}
                 </p>
               </div>
 
               <div>
-                <p className="text-ink-muted text-[11px] font-mono">Relasi sumber</p>
-                <p className="text-ink font-mono mt-0.5">parentId = 0 · versi asli</p>
+                <p className="text-ink-muted text-[11px] font-mono">Pemilik (ownerOf)</p>
+                <p className="text-ink font-mono mt-0.5 break-all">
+                  {originalVersion?.ownerAddress
+                    ? truncateIdentifier(originalVersion.ownerAddress, 6, 4)
+                    : '-'}
+                </p>
               </div>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
               <span
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-btn text-xs font-mono font-medium ${
-                  originalVersion.onChainVerified
+                  originalVersion?.onChainVerified
                     ? 'bg-sage border border-sage-border text-forest'
                     : 'bg-paper border border-border text-ink-muted'
                 }`}
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>
-                  {originalVersion.onChainVerified
+                  {originalVersion?.onChainVerified
                     ? 'Receipt on-chain valid'
                     : 'Menunggu penerbitan kurator'}
                 </span>
               </span>
+
+              {activeNet?.explorerUrl && originalVersion?.transactionHash && (
+                <a
+                  href={`${activeNet.explorerUrl}/tx/${originalVersion.transactionHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-mono text-forest hover:underline"
+                >
+                  <span>Lihat di Etherscan</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </a>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Right Column: Verifikasi Integritas */}
+        {/* Right Column: Verifikasi Integritas Nyata */}
         <div className="bg-surface border border-border rounded-card p-6 space-y-5 shadow-subtle flex flex-col justify-between">
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-2">
@@ -369,13 +477,13 @@ export const ArchiveDetailPage: React.FC = () => {
                   Verifikasi integritas
                 </h2>
                 <p className="text-xs text-ink-muted font-sans mt-0.5">
-                  Berkas asli · perbandingan SHA-256 dengan catatan kontrak
+                  Berkas asli · re-hash SHA-256 langsung &amp; bandingkan dengan smart contract
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={handleVerifyAgain}
+                onClick={() => void handleVerifyAgain()}
                 disabled={isVerifying}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-btn bg-surface hover:bg-paper border border-border text-xs font-mono text-ink shadow-subtle transition-colors"
               >
@@ -384,15 +492,30 @@ export const ArchiveDetailPage: React.FC = () => {
               </button>
             </div>
 
+            {integrityCheck.status !== 'idle' && (
+              <div
+                className={`p-3 rounded-btn border text-xs font-mono leading-relaxed ${
+                  integrityCheck.status === 'match_onchain' ||
+                  integrityCheck.status === 'match_local'
+                    ? 'bg-sage border-sage-border text-forest'
+                    : integrityCheck.status === 'mismatch' || integrityCheck.status === 'error'
+                    ? 'bg-status-dangerBg border-border text-status-danger'
+                    : 'bg-paper border-border text-ink-muted'
+                }`}
+              >
+                {integrityCheck.message}
+              </div>
+            )}
+
             <div className="space-y-3 font-mono text-xs">
               <div className="p-3.5 rounded-btn bg-paper/80 border border-border space-y-1">
                 <p className="text-[11px] text-ink-muted">SHA-256 berkas</p>
                 <p className="text-ink text-[11px] break-all select-all font-mono leading-relaxed">
-                  {originalVersion.fileHash}
+                  {originalVersion?.fileHash || '-'}
                 </p>
               </div>
 
-              {originalVersion.transactionHash && (
+              {originalVersion?.transactionHash && (
                 <div className="p-3.5 rounded-btn bg-paper/80 border border-border space-y-1">
                   <p className="text-[11px] text-ink-muted">Transaction Hash Minting</p>
                   <p className="text-ink text-[11px] break-all select-all font-mono leading-relaxed">
@@ -404,16 +527,18 @@ export const ArchiveDetailPage: React.FC = () => {
 
             <div className="space-y-2 pt-2 text-xs font-mono">
               <div>
-                <p className="text-[11px] text-ink-muted">CID media / metadata</p>
+                <p className="text-[11px] text-ink-muted">CID media / URI metadata IPFS</p>
                 <p className="text-ink text-[11px] break-all select-all mt-0.5">
-                  {originalVersion.metadataUri || originalVersion.ipfsCid}
+                  {originalVersion?.metadataUri ||
+                    originalVersion?.ipfsCid ||
+                    'Belum dipin ke IPFS (menunggu publikasi kurator)'}
                 </p>
               </div>
             </div>
           </div>
 
           <p className="text-[11px] font-mono text-ink-muted pt-3 border-t border-border/80">
-            Hash dihitung dari berkas lalu dicatat di struct Versi on-chain. CID mengidentifikasi lokasi konten di IPFS.
+            Menekan "Verifikasi ulang" mengunduh byte gambar saat ini, menghitung SHA-256 secara langsung, lalu membandingkannya dengan `getVersi(tokenId).fileHash`.
           </p>
         </div>
       </div>
@@ -422,7 +547,7 @@ export const ArchiveDetailPage: React.FC = () => {
       <div className="space-y-4 pt-4 border-t border-border/80">
         <div>
           <h2 className="font-display font-bold text-lg text-ink">
-            Riwayat sumber & turunan
+            Riwayat sumber &amp; turunan
           </h2>
           <p className="text-xs text-ink-muted font-sans mt-0.5">
             Setiap versi memiliki identitas token, SHA-256, CID media, dan metadata sendiri.
@@ -430,11 +555,10 @@ export const ArchiveDetailPage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-4">
-          {/* Version 1: Sumber */}
           <div className="bg-surface border border-border rounded-card p-4 space-y-2 shadow-subtle">
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="font-bold text-ink">
-                {originalVersion.onChainTokenId
+                {originalVersion?.onChainTokenId
                   ? `Asli / Token #${originalVersion.onChainTokenId}`
                   : 'Asli / Belum Tercatat'}
               </span>
@@ -443,7 +567,7 @@ export const ArchiveDetailPage: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-ink-muted font-mono">parentId = 0</p>
-            <p className="text-[11px] text-ink-muted font-mono">{originalVersion.timestamp}</p>
+            <p className="text-[11px] text-ink-muted font-mono">{originalVersion?.timestamp}</p>
             <div className="pt-1">
               <button
                 type="button"
@@ -460,7 +584,6 @@ export const ArchiveDetailPage: React.FC = () => {
             <ArrowRight className="w-5 h-5 text-ink-muted" />
           </div>
 
-          {/* Version 2: Hasil AI */}
           <div className="bg-surface border border-border rounded-card p-4 space-y-2 shadow-subtle">
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="font-bold text-ink">
@@ -476,7 +599,9 @@ export const ArchiveDetailPage: React.FC = () => {
             </div>
             <p className="text-xs text-ink-muted font-mono">
               {derivativeVersion
-                ? `parentId = ${originalVersion.onChainTokenId || '-'} · ${derivativeVersion.requestId ? `Request #${derivativeVersion.requestId}` : 'Kurator'}`
+                ? `parentId = ${originalVersion?.onChainTokenId || '-'} · ${
+                    derivativeVersion.requestId ? `Request #${derivativeVersion.requestId}` : 'Kurator'
+                  }`
                 : 'Belum diajukan'}
             </p>
             <p className="text-[11px] text-ink-muted font-mono">
@@ -500,7 +625,7 @@ export const ArchiveDetailPage: React.FC = () => {
                     Ajukan Restorasi AI (Super-Resolution x4)
                   </h3>
                   <p className="text-xs text-ink-muted font-sans">
-                    Arsip: {archive.id} · Token Induk #{originalVersion.onChainTokenId}
+                    Arsip: {archive.id} · Token Induk #{originalVersion?.onChainTokenId}
                   </p>
                 </div>
               </div>
@@ -550,7 +675,7 @@ export const ArchiveDetailPage: React.FC = () => {
             {isRestoring && (
               <div className="p-3.5 rounded-btn bg-paper border border-border text-xs font-mono space-y-1.5">
                 <p className={restoreStage === 'waiting_wallet' ? 'text-forest font-bold' : 'text-ink-muted'}>
-                  1. Menunggu tanda tangan MetaMask untuk `ajukanRestorasi({originalVersion.onChainTokenId})`
+                  1. Menunggu tanda tangan MetaMask untuk `ajukanRestorasi({originalVersion?.onChainTokenId})`
                 </p>
                 <p className={restoreStage === 'waiting_confirmation' ? 'text-forest font-bold' : 'text-ink-muted'}>
                   2. Menunggu konfirmasi receipt transaksi on-chain
@@ -583,7 +708,7 @@ export const ArchiveDetailPage: React.FC = () => {
               <button
                 type="button"
                 disabled={isRestoring || !restorationFeeEth}
-                onClick={handleConfirmPaidRestore}
+                onClick={() => void handleConfirmPaidRestore()}
                 className="px-5 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-bold shadow-subtle flex items-center gap-2 transition-colors min-h-[40px] disabled:opacity-50"
               >
                 {isRestoring ? (
@@ -594,7 +719,7 @@ export const ArchiveDetailPage: React.FC = () => {
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Bayar {feeDisplay} & Restorasi</span>
+                    <span>Bayar {feeDisplay} &amp; Restorasi</span>
                   </>
                 )}
               </button>

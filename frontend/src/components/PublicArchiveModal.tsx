@@ -143,16 +143,20 @@ export const PublicArchiveModal: React.FC<PublicArchiveModalProps> = ({ archive,
                   <span className="text-ink-muted font-sans">IPFS Content Identifier (CID):</span>
                   <div className="p-2 rounded-btn bg-surface border border-border flex items-center justify-between">
                     <span className="text-[11px] text-ink select-all break-all">
-                      {truncateIdentifier(activeVersion.ipfsCid, 14, 10)}
+                      {activeVersion.ipfsCid
+                        ? truncateIdentifier(activeVersion.ipfsCid, 14, 10)
+                        : 'Belum dipin ke IPFS'}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(activeVersion.ipfsCid, 'cid')}
-                      className="p-1 text-ink-muted hover:text-forest"
-                      title="Salin IPFS CID"
-                    >
-                      {copiedField === 'cid' ? <Check className="w-3.5 h-3.5 text-forest" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
+                    {activeVersion.ipfsCid && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(activeVersion.ipfsCid, 'cid')}
+                        className="p-1 text-ink-muted hover:text-forest"
+                        title="Salin IPFS CID"
+                      >
+                        {copiedField === 'cid' ? <Check className="w-3.5 h-3.5 text-forest" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
                   </div>
                 </div>
 

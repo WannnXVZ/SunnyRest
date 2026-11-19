@@ -1,31 +1,24 @@
 import os
-<<<<<<< HEAD
-from typing import List
-from pydantic_settings import BaseSettings
-
-=======
 from pathlib import Path
-from pydantic_settings import BaseSettings
+from typing import List
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Base directory: D:\project\SunnyRest\SunnyRest\backend
 BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BASE_DIR.parent
 MODELS_DIR = BASE_DIR / "models"
 
-class Settings(BaseSettings):
-    PROJECT_NAME: str = "AI Klasifikasi Adegan & SR"
-    MODEL_CLASSIFIER_PATH: str = str(MODELS_DIR / "finetuned_model_3class.pth")
-    MODEL_SR_PATH: str = str(MODELS_DIR / "RealESRGAN_x4plus.pth")
-    
-    # Fallback jika finetuned belum ada
-    if not os.path.exists(MODEL_CLASSIFIER_PATH):
-        MODEL_CLASSIFIER_PATH = str(MODELS_DIR / "best_model_3class.pth")
->>>>>>> 803235905ecc64af0017e64c1292432328ddf132
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=(str(REPO_ROOT / ".env"), str(BASE_DIR / ".env")),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     PROJECT_NAME: str = "AI Klasifikasi Adegan & SR (SunnyRest)"
-    MODEL_CLASSIFIER_PATH: str = "models/finetuned_model_3class.pth"
-    MODEL_CLASSIFIER_FALLBACK_PATH: str = "models/best_model_3class.pth"
-    MODEL_SR_PATH: str = "models/RealESRGAN_x4plus.pth"
+    MODEL_CLASSIFIER_PATH: str = str(MODELS_DIR / "finetuned_model_3class.pth")
+    MODEL_CLASSIFIER_FALLBACK_PATH: str = str(MODELS_DIR / "best_model_3class.pth")
+    MODEL_SR_PATH: str = str(MODELS_DIR / "RealESRGAN_x4plus.pth")
 
     CLASS_NAMES: List[str] = ["bangunan", "lanskap", "orang"]
 
@@ -39,6 +32,14 @@ class Settings(BaseSettings):
     CONTRACT_ADDRESS: str = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
     VERIFY_ONCHAIN_PAYMENT: bool = False
 
+    # Layanan Pinning IPFS Server-Side (Pinata JWT atau Kubo API lokal)
+    IPFS_API_URL: str = ""
+    PINATA_JWT: str = ""
+    IPFS_GATEWAY: str = "https://gateway.pinata.cloud/ipfs/"
+
+    # Direktori Persistensi Antrean Kurasi & Berkas Sementara Pra-Mint
+    STORAGE_DIR: str = str(BASE_DIR / "storage")
+
     def resolved_classifier_path(self) -> str:
         if os.path.exists(self.MODEL_CLASSIFIER_PATH):
             return self.MODEL_CLASSIFIER_PATH
@@ -46,6 +47,9 @@ class Settings(BaseSettings):
 
     def cors_origin_list(self) -> List[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    def ipfs_configured(self) -> bool:
+        return bool(self.PINATA_JWT.strip() or self.IPFS_API_URL.strip())
 
 
 settings = Settings()

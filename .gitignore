@@ -235,11 +235,12 @@ contracts/typechain-types/
 coverage.json
 .vite/
 
-# Large datasets & model binaries (keep manifests & small samples only)
+# Large datasets, transient storage & model binaries (keep manifests & small samples only)
 data/raw/
 data/processed/
 backend/ml/data/raw/
 backend/ml/data/classification/
+backend/storage/
 backend/models/*.pt
 backend/models/*.pth
 backend/models/*.h5

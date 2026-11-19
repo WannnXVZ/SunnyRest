@@ -1,7 +1,9 @@
+import hashlib
 import io
+import json
 import os
 import sys
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 from PIL import Image
@@ -202,3 +204,121 @@ def test_onchain_abi_decode_and_cors_headers():
     )
     assert preflight.status_code == 200
     assert preflight.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+
+def test_ipfs_proxy_requires_config_and_pins_via_pinata_or_kubo():
+    from app import main as real_main
+    from app.config import settings
+
+    client = TestClient(real_main.app)
+    png_bytes = _make_png_bytes()
+
+    with patch.object(settings, "PINATA_JWT", ""), patch.object(settings, "IPFS_API_URL", ""):
+        res_file = client.post("/ipfs/pin-file", files={"file": ("foto.png", png_bytes, "image/png")})
+        assert res_file.status_code == 503
+        res_json = client.post("/ipfs/pin-json", json={"metadata": {"name": "Arsip #1"}})
+        assert res_json.status_code == 503
+
+    mock_pinata_res = MagicMock(ok=True, status_code=200)
+    mock_pinata_res.json.return_value = {"IpfsHash": "bafybeipinatatestcid123456"}
+    with patch.object(settings, "PINATA_JWT", "jwt-test"), patch.object(settings, "IPFS_API_URL", ""), patch(
+        "app.ipfs.requests.post", return_value=mock_pinata_res
+    ) as post_mock:
+        res_file = client.post("/ipfs/pin-file", files={"file": ("foto.png", png_bytes, "image/png")})
+        assert res_file.status_code == 200
+        data = res_file.json()
+        assert data["cid"] == "bafybeipinatatestcid123456"
+        assert data["uri"] == "ipfs://bafybeipinatatestcid123456"
+        assert data["strategy"] == "pinata"
+        assert post_mock.called
+
+        res_json = client.post("/ipfs/pin-json", json={"metadata": {"name": "Arsip #1"}})
+        assert res_json.status_code == 200
+        assert res_json.json()["strategy"] == "pinata"
+
+    mock_kubo_res = MagicMock(ok=True, status_code=200)
+    mock_kubo_res.json.return_value = {"Hash": "bafybeikubotestcid654321"}
+    with patch.object(settings, "PINATA_JWT", ""), patch.object(
+        settings, "IPFS_API_URL", "http://127.0.0.1:5001"
+    ), patch("app.ipfs.requests.post", return_value=mock_kubo_res):
+        res_kubo = client.post("/ipfs/pin-file", files={"file": ("foto.png", png_bytes, "image/png")})
+        assert res_kubo.status_code == 200
+        assert res_kubo.json()["strategy"] == "local-kubo"
+        assert res_kubo.json()["cid"] == "bafybeikubotestcid654321"
+
+
+def test_persistent_submissions_lifecycle_and_exact_hash(tmp_path):
+    from app import main as real_main
+    from app.config import settings
+
+    client = TestClient(real_main.app)
+    png_bytes = _make_png_bytes(40, 30)
+    expected_sha256 = hashlib.sha256(png_bytes).hexdigest()
+
+    payload = {
+        "title": "Gedung Tua Samarinda",
+        "creator": "Fotografer Lapangan",
+        "source": "Dokumentasi Kota",
+        "licenseInfo": "CC BY 4.0",
+        "initialCategory": "bangunan",
+        "finalCategory": "bangunan",
+        "status": "menunggu_tinjauan",
+        "aiPrediction": {
+            "category": "bangunan",
+            "confidence": 0.91,
+            "advisoryNote": "Saran model",
+        },
+        "createdAt": "19 Nov 2026",
+        "updatedAt": "19 Nov 2026",
+    }
+
+    with patch.object(settings, "STORAGE_DIR", str(tmp_path)):
+        created = client.post(
+            "/submissions",
+            files={"file": ("gedung.png", png_bytes, "image/png")},
+            data={"payload": json.dumps(payload)},
+        )
+        assert created.status_code == 200
+        item = created.json()
+        assert item["id"] == "SR-0001"
+        assert item["originalHash"] == expected_sha256
+        assert item["versions"][0]["fileHash"] == expected_sha256
+        assert item["versions"][0]["dimensions"] == "40 x 30 px"
+        stored_url = item["versions"][0]["imageUrl"]
+        assert stored_url.startswith("/storage/files/")
+
+        # Unduh ulang berkas dan pastikan byte serta SHA-256 tidak berubah
+        downloaded = client.get(stored_url)
+        assert downloaded.status_code == 200
+        assert hashlib.sha256(downloaded.content).hexdigest() == expected_sha256
+
+        # Daftar pengajuan mengembalikan item yang baru dibuat
+        listed = client.get("/submissions")
+        assert listed.status_code == 200
+        assert len(listed.json()["items"]) == 1
+        assert listed.json()["items"][0]["id"] == "SR-0001"
+
+        # Pengajuan berkas yang sama lagi harus ditolak sebagai duplikat (409)
+        dup = client.post(
+            "/submissions",
+            files={"file": ("gedung.png", png_bytes, "image/png")},
+            data={"payload": json.dumps(payload)},
+        )
+        assert dup.status_code == 409
+
+        # Unggah berkas turunan SR + patch status kurator
+        sr_bytes = _make_png_bytes(160, 120)
+        up_sr = client.post(
+            "/submissions/SR-0001/upload-file",
+            files={"file": ("gedung_sr.png", sr_bytes, "image/png")},
+        )
+        assert up_sr.status_code == 200
+        assert up_sr.json()["sha256"] == hashlib.sha256(sr_bytes).hexdigest()
+
+        patched = client.patch(
+            "/submissions/SR-0001",
+            json={"status": "disetujui", "curatorNotes": "Layak terbit"},
+        )
+        assert patched.status_code == 200
+        assert patched.json()["status"] == "disetujui"
+        assert patched.json()["curatorNotes"] == "Layak terbit"

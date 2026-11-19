@@ -17,21 +17,28 @@ import { useArchiveStore } from '../store/useArchiveStore';
 import { PhotoCategory, ArchiveItem } from '../types';
 import { PublicArchiveModal } from '../components/PublicArchiveModal';
 import { computeFileSHA256, truncateIdentifier } from '../lib/hash';
-import { predictPhotoCategory } from '../lib/api';
+import { predictPhotoCategory, resolveMediaUrl } from '../lib/api';
+import { normalizeHexHash } from '../lib/contract';
 
 export const PublicPortalPage: React.FC = () => {
-  const { archives, publicTab, setPublicTab, setViewMode, addArchive, restorationFeeEth } = useArchiveStore();
+  const {
+    archives,
+    publicTab,
+    setPublicTab,
+    setViewMode,
+    submitArchive,
+    restorationFeeEth,
+    wallet,
+  } = useArchiveStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [modalArchive, setModalArchive] = useState<ArchiveItem | null>(null);
 
-  // Verifier State
   const [verifyInput, setVerifyInput] = useState('');
   const [verificationResult, setVerificationResult] = useState<ArchiveItem | null>(null);
   const [hasSearchedVerify, setHasSearchedVerify] = useState(false);
 
-  // Upload & Paid Restoration State
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [uploadHash, setUploadHash] = useState<string>('');
@@ -45,11 +52,11 @@ export const PublicPortalPage: React.FC = () => {
   const [uploadConsent, setUploadConsent] = useState(false);
   const [isProcessingRestoration, setIsProcessingRestoration] = useState(false);
   const [restorationStep, setRestorationStep] = useState<number>(1);
-  const [restorationSuccess, setRestorationSuccess] = useState<{ archiveId: string; txHash: string } | null>(null);
+  const [restorationSuccess, setRestorationSuccess] = useState<{ archiveId: string; statusNote: string } | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Filter public archives (show approved & recorded items)
   const publicArchives = archives.filter((item) => {
+    if (item.status !== 'tercatat') return false;
     const matchesSearch =
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -61,7 +68,13 @@ export const PublicPortalPage: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const restoredArchives = archives.filter((a) => a.versions.some((v) => v.versionType === 'derivative'));
+  const restoredArchives = archives.filter((a) =>
+    a.versions.some((v) => v.versionType === 'derivative')
+  );
+  const onChainTokenCount = archives.reduce(
+    (acc, item) => acc + item.versions.filter((v) => Boolean(v.onChainTokenId)).length,
+    0
+  );
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,7 +94,11 @@ export const PublicPortalPage: React.FC = () => {
     try {
       const hash = await computeFileSHA256(file);
       setUploadHash(hash);
-      const duplicateFound = archives.some((a) => a.originalHash.toLowerCase() === hash.toLowerCase());
+      const duplicateFound = archives.some(
+        (a) =>
+          a.status !== 'ditolak' &&
+          normalizeHexHash(a.originalHash) === normalizeHexHash(hash)
+      );
       setIsDuplicate(duplicateFound);
     } catch {
       setUploadError('Gagal menghitung hash SHA-256 berkas.');
@@ -116,41 +133,54 @@ export const PublicPortalPage: React.FC = () => {
 
     let aiCat: PhotoCategory = uploadCategory;
     let aiConf = 0;
+    let aiScores: Record<PhotoCategory, number> | undefined;
+    let aiModelVersion: string | undefined;
     let aiNote = `Kategori awal dipilih pengunggah: ${uploadCategory.toUpperCase()}.`;
     try {
       const pred = await predictPhotoCategory(uploadFile);
       aiCat = pred.label;
       aiConf = pred.confidence;
-      aiNote = `Saran AI (${pred.model_version}): ${pred.label.toUpperCase()} (${(pred.confidence * 100).toFixed(1)}%). Menunggu tinjauan kurator.`;
+      aiScores = pred.scores;
+      aiModelVersion = pred.model_version;
+      aiNote = `Saran AI (${pred.model_version}): ${pred.label.toUpperCase()} (${(
+        pred.confidence * 100
+      ).toFixed(1)}%). Menunggu tinjauan kurator.`;
     } catch {
       // Fallback ke kategori manual bila backend AI tidak aktif
     }
 
     setRestorationStep(2);
-    const archiveId = addArchive(
-      {
-        title: uploadTitle.trim(),
-        creator: uploadCreator.trim(),
-        source: uploadSource.trim(),
-        licenseInfo: uploadLicense.trim(),
-        initialCategory: aiCat,
-        finalCategory: uploadCategory,
-        status: 'menunggu_tinjauan',
-        aiPrediction: {
-          category: aiCat,
-          confidence: aiConf,
-          advisoryNote: aiNote,
-        },
-        curatorNotes: 'Diajukan melalui portal publik, menunggu peninjauan dan penerbitan kurator.',
-        originalHash: uploadHash,
-        originalCid: `bafybei${uploadHash.substring(0, 16)}draft`,
+    const res = await submitArchive(uploadFile, {
+      title: uploadTitle.trim(),
+      creator: uploadCreator.trim(),
+      source: uploadSource.trim(),
+      licenseInfo: uploadLicense.trim(),
+      initialCategory: aiCat,
+      finalCategory: uploadCategory,
+      status: 'menunggu_tinjauan',
+      aiPrediction: {
+        category: aiCat,
+        confidence: aiConf,
+        scores: aiScores,
+        modelVersion: aiModelVersion,
+        advisoryNote: aiNote,
       },
-      uploadPreview || undefined
-    );
+      curatorNotes: 'Diajukan melalui portal publik, menunggu peninjauan dan penerbitan kurator.',
+      originalHash: uploadHash,
+      originalCid: '',
+    });
+
+    setIsProcessingRestoration(false);
+    if (!res.success || !res.archiveId) {
+      setUploadError(res.error || 'Gagal mengirim pengajuan ke server.');
+      return;
+    }
 
     setRestorationStep(3);
-    setRestorationSuccess({ archiveId, txHash: 'Menunggu penerbitan kurator on-chain' });
-    setIsProcessingRestoration(false);
+    setRestorationSuccess({
+      archiveId: res.archiveId,
+      statusNote: 'Tersimpan di antrean kurasi backend (menunggu peninjauan & minting on-chain)',
+    });
   };
 
   const handleVerify = (e: React.FormEvent) => {
@@ -165,11 +195,11 @@ export const PublicPortalPage: React.FC = () => {
     const match = archives.find(
       (a) =>
         a.id.toLowerCase() === query ||
-        a.originalHash.toLowerCase().includes(query) ||
+        normalizeHexHash(a.originalHash).includes(normalizeHexHash(query)) ||
         a.originalCid.toLowerCase().includes(query) ||
         a.versions.some(
           (v) =>
-            v.fileHash.toLowerCase().includes(query) ||
+            normalizeHexHash(v.fileHash).includes(normalizeHexHash(query)) ||
             v.ipfsCid.toLowerCase().includes(query) ||
             v.transactionHash?.toLowerCase().includes(query)
         )
@@ -181,7 +211,9 @@ export const PublicPortalPage: React.FC = () => {
     setPublicTab('verifikasi');
     setVerifyInput(hash);
     const match = archives.find(
-      (a) => a.originalHash.toLowerCase() === hash.toLowerCase() || a.versions.some((v) => v.fileHash === hash)
+      (a) =>
+        normalizeHexHash(a.originalHash) === normalizeHexHash(hash) ||
+        a.versions.some((v) => normalizeHexHash(v.fileHash) === normalizeHexHash(hash))
     );
     setVerificationResult(match || null);
     setHasSearchedVerify(true);
@@ -189,13 +221,12 @@ export const PublicPortalPage: React.FC = () => {
 
   return (
     <div className="space-y-12 pb-16">
-      {/* Public Hero Header */}
       <section className="bg-gradient-to-b from-paper-light to-paper pt-12 pb-10 border-b border-border/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 flex flex-col items-center text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-btn bg-surface border border-border text-xs font-mono text-forest mx-auto">
             <span>PORTAL PUBLIK</span>
             <span>·</span>
-            <span>PRESERVASI & RESTORASI FOTO TERBUKA</span>
+            <span>PRESERVASI &amp; RESTORASI FOTO TERBUKA</span>
           </div>
 
           <div className="space-y-4 max-w-4xl mx-auto text-center">
@@ -207,35 +238,37 @@ export const PublicPortalPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Key Public Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 max-w-3xl w-full mx-auto">
             <div className="bg-surface border border-border rounded-card p-5 shadow-subtle text-center flex flex-col items-center justify-center">
-              <p className="text-xs font-mono text-ink-muted">Total Arsip Terkurasi</p>
-              <p className="text-2xl font-display font-bold text-ink mt-1">128+ Foto</p>
-              <p className="text-[11px] font-mono text-forest mt-1">Berizin & bersumber jelas</p>
+              <p className="text-xs font-mono text-ink-muted">Total Arsip Tercatat</p>
+              <p className="text-2xl font-display font-bold text-ink mt-1">
+                {publicArchives.length} Foto
+              </p>
+              <p className="text-[11px] font-mono text-forest mt-1">Berizin &amp; terverifikasi</p>
             </div>
 
             <div className="bg-surface border border-border rounded-card p-5 shadow-subtle text-center flex flex-col items-center justify-center">
               <p className="text-xs font-mono text-ink-muted">Versi Direstorasi AI</p>
-              <p className="text-2xl font-display font-bold text-ink mt-1">42+ Versi</p>
-              <p className="text-[11px] font-mono text-brass-text mt-1">Model Super-Resolution x4</p>
+              <p className="text-2xl font-display font-bold text-ink mt-1">
+                {restoredArchives.length} Versi
+              </p>
+              <p className="text-[11px] font-mono text-brass-text mt-1">Model Real-ESRGAN x4</p>
             </div>
 
             <div className="bg-surface border border-border rounded-card p-5 shadow-subtle text-center flex flex-col items-center justify-center">
               <p className="text-xs font-mono text-ink-muted">Token On-Chain Tercatat</p>
-              <p className="text-2xl font-display font-bold text-ink mt-1">86 Token</p>
-              <p className="text-[11px] font-mono text-forest mt-1">Jaringan Sepolia Testnet</p>
+              <p className="text-2xl font-display font-bold text-ink mt-1">
+                {onChainTokenCount} Token
+              </p>
+              <p className="text-[11px] font-mono text-forest mt-1">{wallet.chainName}</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        {/* TAB 1: KOLEKSI ARSIP */}
         {publicTab === 'semua' && (
           <div className="space-y-8">
-            {/* Filter and Search Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-2 border-b border-border/80">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-mono text-ink-muted mr-1">Kategori:</span>
@@ -260,7 +293,6 @@ export const PublicPortalPage: React.FC = () => {
                 ))}
               </div>
 
-              {/* Search input */}
               <div className="relative w-full sm:w-72">
                 <Search className="w-4 h-4 text-ink-muted absolute left-3 top-3 pointer-events-none" />
                 <input
@@ -273,83 +305,87 @@ export const PublicPortalPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Gallery Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {publicArchives.map((item) => {
-                const originalVer = item.versions.find((v) => v.versionType === 'original') || item.versions[0];
-                const hasDerivative = item.versions.some((v) => v.versionType === 'derivative');
+            {publicArchives.length === 0 ? (
+              <div className="bg-surface border border-border rounded-card p-10 text-center text-xs font-mono text-ink-muted">
+                Belum ada arsip yang diterbitkan on-chain di jaringan {wallet.chainName}.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {publicArchives.map((item) => {
+                  const originalVer =
+                    item.versions.find((v) => v.versionType === 'original') || item.versions[0];
+                  const hasDerivative = item.versions.some((v) => v.versionType === 'derivative');
 
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => setModalArchive(item)}
-                    className="bg-surface border border-border rounded-card overflow-hidden shadow-subtle hover:border-forest transition-all flex flex-col justify-between group cursor-pointer"
-                  >
-                    <div>
-                      {/* Photo Thumbnail */}
-                      <div className="relative h-56 bg-paper overflow-hidden">
-                        <img
-                          src={originalVer?.imageUrl}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
-                        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-                          <span className="px-2 py-0.5 rounded-btn bg-surface/90 backdrop-blur-sm text-[10px] font-mono font-bold uppercase tracking-wider text-ink shadow-subtle">
-                            {item.finalCategory}
-                          </span>
-                          {hasDerivative && (
-                            <span className="px-2 py-0.5 rounded-btn bg-brass-light/95 border border-brass-border text-[10px] font-mono font-bold text-brass-text shadow-subtle flex items-center gap-1">
-                              <Sparkles className="w-3 h-3 text-brass" />
-                              <span>Direstorasi AI</span>
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => setModalArchive(item)}
+                      className="bg-surface border border-border rounded-card overflow-hidden shadow-subtle hover:border-forest transition-all flex flex-col justify-between group cursor-pointer"
+                    >
+                      <div>
+                        <div className="relative h-56 bg-paper overflow-hidden">
+                          <img
+                            src={originalVer?.imageUrl ? resolveMediaUrl(originalVer.imageUrl) : ''}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+                            <span className="px-2 py-0.5 rounded-btn bg-surface/90 backdrop-blur-sm text-[10px] font-mono font-bold uppercase tracking-wider text-ink shadow-subtle">
+                              {item.finalCategory}
                             </span>
-                          )}
+                            {hasDerivative && (
+                              <span className="px-2 py-0.5 rounded-btn bg-brass-light/95 border border-brass-border text-[10px] font-mono font-bold text-brass-text shadow-subtle flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-brass" />
+                                <span>Direstorasi AI</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="p-5 space-y-2">
+                          <h3 className="text-lg font-display font-semibold text-ink group-hover:text-forest transition-colors line-clamp-1">
+                            {item.title}
+                          </h3>
+                          <p className="text-xs text-ink-muted font-sans line-clamp-1">
+                            {item.creator} · {item.source}
+                          </p>
+                          <p className="text-[11px] font-mono text-ink-muted">
+                            ID: {item.id} · {item.versions.length} versi tercatat
+                          </p>
                         </div>
                       </div>
 
-                      {/* Info */}
-                      <div className="p-5 space-y-2">
-                        <h3 className="text-lg font-display font-semibold text-ink group-hover:text-forest transition-colors line-clamp-1">
-                          {item.title}
-                        </h3>
-                        <p className="text-xs text-ink-muted font-sans line-clamp-1">
-                          {item.creator} · {item.source}
-                        </p>
-                        <p className="text-[11px] font-mono text-ink-muted">
-                          ID: {item.id} · {item.versions.length} versi tercatat
-                        </p>
+                      <div className="p-5 pt-0 flex items-center justify-between border-t border-border/50">
+                        <span className="text-[11px] font-mono text-forest font-medium flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>On-Chain Verified</span>
+                        </span>
+                        <span className="text-xs font-semibold text-forest flex items-center gap-1 opacity-90 group-hover:opacity-100">
+                          <span>Lihat detail</span>
+                          <Eye className="w-3.5 h-3.5" />
+                        </span>
                       </div>
                     </div>
-
-                    <div className="p-5 pt-0 flex items-center justify-between border-t border-border/50">
-                      <span className="text-[11px] font-mono text-forest font-medium flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>On-Chain Verified</span>
-                      </span>
-                      <span className="text-xs font-semibold text-forest flex items-center gap-1 opacity-90 group-hover:opacity-100">
-                        <span>Lihat detail</span>
-                        <Eye className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
-        {/* TAB 2: UNGGAH PENGAJUAN ARSIP */}
         {publicTab === 'unggah_restorasi' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="space-y-2 text-center">
               <span className="px-3 py-1 rounded-btn bg-brass-light border border-brass-border text-xs font-mono font-bold text-brass-text">
-                Pengajuan Arsip Baru · Restorasi Berbayar ({restorationFeeEth ? `${restorationFeeEth} ETH` : 'Sesuai Kontrak'}) Setelah Terbit
+                Pengajuan Arsip Baru · Restorasi Berbayar (
+                {restorationFeeEth ? `${restorationFeeEth} ETH` : 'Sesuai Kontrak'}) Setelah Terbit
               </span>
               <h2 className="text-2xl sm:text-3xl font-display font-bold text-ink">
                 Unggah Foto Berizin ke Antrean Kurasi
               </h2>
               <p className="text-xs md:text-sm text-ink-muted max-w-2xl mx-auto leading-relaxed">
-                Foto baru diajukan terlebih dahulu untuk ditinjau kurator dan dicatat on-chain. Setelah memiliki Token ID on-chain, pemohon dapat mengajukan restorasi berbayar melalui halaman Detail Arsip.
+                Foto baru diajukan terlebih dahulu untuk ditinjau kurator, dipin ke IPFS, dan dicatat on-chain. Setelah memiliki Token ID on-chain, pemohon dapat mengajukan restorasi berbayar melalui halaman Detail Arsip.
               </p>
             </div>
 
@@ -370,7 +406,7 @@ export const PublicPortalPage: React.FC = () => {
                     Pengajuan Arsip Berhasil Dicatat di Antrean!
                   </h3>
                   <p className="text-xs text-ink-muted leading-relaxed font-sans">
-                    Arsip baru telah dibuat dan menunggu peninjauan kurator untuk dicatat on-chain sebelum dapat diajukan restorasi berbayar.
+                    Arsip baru telah disimpan dan menunggu peninjauan kurator untuk dipin ke IPFS serta dicatat on-chain.
                   </p>
                 </div>
 
@@ -380,8 +416,8 @@ export const PublicPortalPage: React.FC = () => {
                     <span className="font-bold text-forest">{restorationSuccess.archiveId}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-ink-muted">Status On-Chain:</span>
-                    <p className="text-[11px] text-ink select-all break-all">{restorationSuccess.txHash}</p>
+                    <span className="text-ink-muted">Status Antrean:</span>
+                    <p className="text-[11px] text-ink select-all break-all">{restorationSuccess.statusNote}</p>
                   </div>
                 </div>
 
@@ -394,7 +430,7 @@ export const PublicPortalPage: React.FC = () => {
                     }}
                     className="px-5 py-2.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle min-h-[44px]"
                   >
-                    Lihat Hasil Restorasi Foto
+                    Lihat Pratinjau Arsip
                   </button>
                   <button
                     type="button"
@@ -411,9 +447,8 @@ export const PublicPortalPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handlePayAndRestore} className="space-y-6">
+              <form onSubmit={(e) => void handlePayAndRestore(e)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                  {/* Bagian 1: Berkas Foto */}
                   <div className="bg-surface border border-border rounded-card p-6 space-y-4 shadow-subtle">
                     <h3 className="text-xs font-mono font-semibold tracking-wider text-ink-muted uppercase">
                       01 · BERKAS FOTO ASLI
@@ -483,10 +518,9 @@ export const PublicPortalPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Bagian 2: Provenance & Perizinan */}
                   <div className="bg-surface border border-border rounded-card p-6 space-y-4 shadow-subtle">
                     <h3 className="text-xs font-mono font-semibold tracking-wider text-ink-muted uppercase">
-                      02 · PROVENANCE & PERIZINAN
+                      02 · PROVENANCE &amp; PERIZINAN
                     </h3>
 
                     <div className="space-y-1.5">
@@ -498,7 +532,7 @@ export const PublicPortalPage: React.FC = () => {
                         type="text"
                         value={uploadTitle}
                         onChange={(e) => setUploadTitle(e.target.value)}
-                        placeholder="Contoh: Balai Kota Lama Samarinda"
+                        placeholder="Tuliskan judul foto arsip"
                         className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none min-h-[44px]"
                         required
                       />
@@ -542,7 +576,7 @@ export const PublicPortalPage: React.FC = () => {
                         id="pub-license-input"
                         value={uploadLicense}
                         onChange={(e) => setUploadLicense(e.target.value)}
-                        placeholder="Jelaskan bukti izin atau lisensi (misal: CC-BY, Domain Publik)"
+                        placeholder="Jelaskan bukti izin atau lisensi (misal: CC BY 4.0, Domain Publik)"
                         rows={2}
                         className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none resize-none"
                         required
@@ -564,12 +598,11 @@ export const PublicPortalPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Bagian 3: Kirim Pengajuan ke Antrean Kurasi */}
                 <div className="bg-surface border border-border rounded-card p-6 space-y-4 shadow-subtle">
                   <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-border">
                     <div className="space-y-0.5">
                       <h3 className="text-base font-display font-bold text-ink">
-                        Praklasifikasi AI & Pengiriman Pengajuan
+                        Praklasifikasi AI &amp; Pengiriman Pengajuan
                       </h3>
                       <p className="text-xs text-ink-muted font-sans">
                         Foto diperiksa hash SHA-256 dan diklasifikasi AI sebelum masuk tinjauan kurator.
@@ -588,7 +621,7 @@ export const PublicPortalPage: React.FC = () => {
                           1. Memanggil layanan klasifikasi AI (/predict)
                         </p>
                         <p className={restorationStep >= 2 ? 'text-forest font-semibold' : 'text-ink-muted'}>
-                          2. Menyimpan pengajuan ke antrean kurator
+                          2. Menyimpan pengajuan persisten ke antrean backend
                         </p>
                       </div>
                     </div>
@@ -597,7 +630,7 @@ export const PublicPortalPage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isProcessingRestoration || !uploadFile || isDuplicate}
-                    className="w-full py-3.5 px-6 rounded-btn bg-forest hover:bg-forest-hover text-surface text-sm font-semibold shadow-subtle flex items-center justify-center gap-2 min-h-[48px] transition-colors"
+                    className="w-full py-3.5 px-6 rounded-btn bg-forest hover:bg-forest-hover text-surface text-sm font-semibold shadow-subtle flex items-center justify-center gap-2 min-h-[48px] transition-colors disabled:opacity-50"
                   >
                     {isProcessingRestoration ? (
                       <>
@@ -621,112 +654,115 @@ export const PublicPortalPage: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: ETALASE RESTORASI AI */}
         {publicTab === 'restorasi' && (
           <div className="space-y-8">
             <div className="space-y-2">
               <h2 className="text-2xl font-display font-bold text-ink">
-                Etalase Restorasi AI & Peningkatan Resolusi
+                Etalase Restorasi AI &amp; Peningkatan Resolusi
               </h2>
               <p className="text-xs md:text-sm text-ink-muted max-w-3xl leading-relaxed">
                 Menampilkan perbandingan foto sumber beresolusi rendah terhadap keluaran model super-resolution terlatih. Setiap hasil olahan tetap mempertahankan foto asli secara terpisah dalam silsilah versi.
               </p>
             </div>
 
-            <div className="space-y-8">
-              {restoredArchives.map((archive) => {
-                const originalVer = archive.versions.find((v) => v.versionType === 'original') || archive.versions[0];
-                const derivativeVer = archive.versions.find((v) => v.versionType === 'derivative');
+            {restoredArchives.length === 0 ? (
+              <div className="bg-surface border border-border rounded-card p-10 text-center text-xs font-mono text-ink-muted">
+                Belum ada arsip yang memiliki versi restorasi AI pada jaringan {wallet.chainName}.
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {restoredArchives.map((archive) => {
+                  const originalVer =
+                    archive.versions.find((v) => v.versionType === 'original') || archive.versions[0];
+                  const derivativeVer = archive.versions.find((v) => v.versionType === 'derivative');
 
-                return (
-                  <div
-                    key={archive.id}
-                    className="bg-surface border border-border rounded-card p-6 space-y-6 shadow-subtle"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border/80">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono font-bold text-forest px-2 py-0.5 rounded-btn bg-sage">
-                            {archive.id}
-                          </span>
-                          <span className="text-xs font-mono text-ink-muted capitalize">
-                            Kategori: {archive.finalCategory}
-                          </span>
-                          {archive.restorationFeePaid && (
-                            <span className="text-[10px] font-mono bg-brass-light border border-brass-border text-brass-text px-2 py-0.5 rounded-btn font-bold">
-                              Biaya: {archive.restorationFeePaid}
+                  return (
+                    <div
+                      key={archive.id}
+                      className="bg-surface border border-border rounded-card p-6 space-y-6 shadow-subtle"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border/80">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono font-bold text-forest px-2 py-0.5 rounded-btn bg-sage">
+                              {archive.id}
                             </span>
-                          )}
+                            <span className="text-xs font-mono text-ink-muted capitalize">
+                              Kategori: {archive.finalCategory}
+                            </span>
+                            {archive.restorationFeePaid && (
+                              <span className="text-[10px] font-mono bg-brass-light border border-brass-border text-brass-text px-2 py-0.5 rounded-btn font-bold">
+                                Biaya: {archive.restorationFeePaid}
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-xl font-display font-bold text-ink mt-1">
+                            {archive.title}
+                          </h3>
                         </div>
-                        <h3 className="text-xl font-display font-bold text-ink mt-1">
-                          {archive.title}
-                        </h3>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setModalArchive(archive)}
-                        className="px-4 py-2 rounded-btn bg-paper hover:bg-sage border border-border text-xs font-semibold text-ink flex items-center gap-1.5"
-                      >
-                        <span>Buka Riwayat Lengkap</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    {/* Side by side comparison */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Original */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono font-semibold text-ink uppercase">
-                            01 · Foto Sumber (Original)
-                          </span>
-                          <span className="text-[10px] font-mono text-ink-muted bg-paper px-2 py-0.5 rounded-btn">
-                            Resolusi Dasar
-                          </span>
-                        </div>
-                        <div className="h-72 rounded-btn overflow-hidden bg-paper border border-border">
-                          <img
-                            src={originalVer?.imageUrl}
-                            alt="Foto Asli"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <p className="text-[11px] font-mono text-ink-muted">
-                          Hash asli: {truncateIdentifier(originalVer?.fileHash || '', 12, 8)}
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setModalArchive(archive)}
+                          className="px-4 py-2 rounded-btn bg-paper hover:bg-sage border border-border text-xs font-semibold text-ink flex items-center gap-1.5"
+                        >
+                          <span>Buka Riwayat Lengkap</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </button>
                       </div>
 
-                      {/* Derivative */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono font-semibold text-forest uppercase flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-brass" />
-                            <span>02 · Hasil Restorasi AI (Super-Resolution)</span>
-                          </span>
-                          <span className="text-[10px] font-mono text-brass-text bg-brass-light border border-brass-border px-2 py-0.5 rounded-btn">
-                            Model Pralatih x4
-                          </span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono font-semibold text-ink uppercase">
+                              01 · Foto Sumber (Original)
+                            </span>
+                            <span className="text-[10px] font-mono text-ink-muted bg-paper px-2 py-0.5 rounded-btn">
+                              Resolusi Dasar
+                            </span>
+                          </div>
+                          <div className="h-72 rounded-btn overflow-hidden bg-paper border border-border">
+                            <img
+                              src={originalVer?.imageUrl ? resolveMediaUrl(originalVer.imageUrl) : ''}
+                              alt="Foto Asli"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <p className="text-[11px] font-mono text-ink-muted">
+                            Hash asli: {truncateIdentifier(originalVer?.fileHash || '', 12, 8)}
+                          </p>
                         </div>
-                        <div className="h-72 rounded-btn overflow-hidden bg-paper border border-border">
-                          <img
-                            src={derivativeVer?.imageUrl}
-                            alt="Foto Restorasi"
-                            className="w-full h-full object-cover"
-                          />
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono font-semibold text-forest uppercase flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-brass" />
+                              <span>02 · Hasil Restorasi AI (Super-Resolution)</span>
+                            </span>
+                            <span className="text-[10px] font-mono text-brass-text bg-brass-light border border-brass-border px-2 py-0.5 rounded-btn">
+                              Real-ESRGAN x4
+                            </span>
+                          </div>
+                          <div className="h-72 rounded-btn overflow-hidden bg-paper border border-border">
+                            <img
+                              src={derivativeVer?.imageUrl ? resolveMediaUrl(derivativeVer.imageUrl) : ''}
+                              alt="Foto Restorasi"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <p className="text-[11px] font-mono text-ink-muted">
+                            Hash turunan: {truncateIdentifier(derivativeVer?.fileHash || '', 12, 8)} · Parent:{' '}
+                            {derivativeVer?.parentId || originalVer?.onChainTokenId || '-'}
+                          </p>
                         </div>
-                        <p className="text-[11px] font-mono text-ink-muted">
-                          Hash turunan: {truncateIdentifier(derivativeVer?.fileHash || '', 12, 8)} · Parent: {archive.id}-V1
-                        </p>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
-        {/* TAB 4: VERIFIKASI TERBUKA ON-CHAIN */}
         {publicTab === 'verifikasi' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="space-y-2 text-center">
@@ -738,7 +774,6 @@ export const PublicPortalPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Verifier Search Form */}
             <form onSubmit={handleVerify} className="bg-surface border border-border rounded-card p-6 space-y-4 shadow-subtle">
               <label htmlFor="public-verify-input" className="text-xs font-mono text-ink-muted">
                 KATA KUNCI PEMERIKSAAN (SHA-256 / CID / ID ARSIP)
@@ -749,7 +784,7 @@ export const PublicPortalPage: React.FC = () => {
                   type="text"
                   value={verifyInput}
                   onChange={(e) => setVerifyInput(e.target.value)}
-                  placeholder="Contoh: SR-ARCH-0019 atau hash 7a9e2f6c91a8..."
+                  placeholder="Masukkan ID arsip, CID IPFS, atau hash SHA-256..."
                   className="flex-1 px-4 py-3 rounded-btn bg-paper/60 border border-border text-xs text-ink focus:border-forest outline-none min-h-[44px]"
                 />
                 <button
@@ -761,27 +796,27 @@ export const PublicPortalPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Quick Preset Buttons */}
-              <div className="pt-2 flex flex-wrap items-center gap-2 text-xs font-mono text-ink-muted">
-                <span>Coba contoh:</span>
-                {archives.slice(0, 3).map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => {
-                      setVerifyInput(a.id);
-                      setVerificationResult(a);
-                      setHasSearchedVerify(true);
-                    }}
-                    className="px-2.5 py-1 rounded-btn bg-paper hover:bg-sage border border-border text-ink"
-                  >
-                    {a.id}
-                  </button>
-                ))}
-              </div>
+              {archives.length > 0 && (
+                <div className="pt-2 flex flex-wrap items-center gap-2 text-xs font-mono text-ink-muted">
+                  <span>Arsip terdaftar:</span>
+                  {archives.slice(0, 3).map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => {
+                        setVerifyInput(a.id);
+                        setVerificationResult(a);
+                        setHasSearchedVerify(true);
+                      }}
+                      className="px-2.5 py-1 rounded-btn bg-paper hover:bg-sage border border-border text-ink"
+                    >
+                      {a.id}
+                    </button>
+                  ))}
+                </div>
+              )}
             </form>
 
-            {/* Verification Result Card */}
             {hasSearchedVerify && (
               <div className="animate-in fade-in duration-200">
                 {verificationResult ? (
@@ -792,10 +827,10 @@ export const PublicPortalPage: React.FC = () => {
                       </div>
                       <div>
                         <h3 className="text-base font-display font-bold text-ink">
-                          Arsip Valid & Tercatat On-Chain
+                          Arsip Valid &amp; Ditemukan di Registri
                         </h3>
                         <p className="text-xs font-mono text-ink-muted">
-                          Identitas dan hash berkas cocok dengan registri smart contract.
+                          Identitas dan hash berkas cocok dengan catatan sistem/kontrak.
                         </p>
                       </div>
                     </div>
@@ -815,7 +850,9 @@ export const PublicPortalPage: React.FC = () => {
                       </div>
                       <div className="space-y-1">
                         <span className="text-ink-muted font-sans">IPFS CID:</span>
-                        <p className="text-ink select-all break-all">{verificationResult.originalCid}</p>
+                        <p className="text-ink select-all break-all">
+                          {verificationResult.originalCid || 'Belum dipin ke IPFS'}
+                        </p>
                       </div>
                     </div>
 
@@ -835,7 +872,7 @@ export const PublicPortalPage: React.FC = () => {
                       Data tidak ditemukan dalam registri arsip.
                     </p>
                     <p className="text-xs text-ink-muted max-w-sm mx-auto">
-                      Hash atau ID yang Anda masukkan tidak cocok dengan catatan versi publik yang telah disetujui.
+                      Hash atau ID yang Anda masukkan tidak cocok dengan catatan versi publik saat ini.
                     </p>
                   </div>
                 )}
@@ -844,10 +881,9 @@ export const PublicPortalPage: React.FC = () => {
           </div>
         )}
 
-        {/* Direct CTA to Workspace Login for Curators */}
         <section className="bg-paper border border-border rounded-card p-8 text-center space-y-4">
           <h2 className="text-2xl font-display font-bold text-ink">
-            Pintu Masuk Kurator & Verifikator Resmi
+            Pintu Masuk Kurator &amp; Verifikator Resmi
           </h2>
           <p className="text-xs md:text-sm text-ink-muted max-w-xl mx-auto leading-relaxed font-sans">
             Kurator terdaftar dapat masuk ke panel kerja privat menggunakan dompet kripto MetaMask untuk menyetujui foto antrean dan menandatangani pencatatan versi resmi ke smart contract.
@@ -864,7 +900,6 @@ export const PublicPortalPage: React.FC = () => {
         </section>
       </div>
 
-      {/* Public Footer */}
       <footer className="mt-16 pt-8 pb-12 border-t border-border bg-surface text-xs text-ink-muted font-mono leading-relaxed">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
@@ -885,7 +920,6 @@ export const PublicPortalPage: React.FC = () => {
         </div>
       </footer>
 
-      {/* Modal detail */}
       <PublicArchiveModal
         archive={modalArchive}
         onClose={() => setModalArchive(null)}

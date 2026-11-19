@@ -1,21 +1,30 @@
 import React from 'react';
-import { Plus, ArrowRight } from 'lucide-react';
+import { Plus, ArrowRight, RotateCw } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { StatusBadge } from '../components/StatusBadge';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
 export const OverviewPage: React.FC = () => {
-  const { setActivePage, setSelectedArchiveId, archives } = useArchiveStore();
+  const {
+    setActivePage,
+    setSelectedArchiveId,
+    archives,
+    wallet,
+    isSyncingArchives,
+    syncArchives,
+  } = useArchiveStore();
 
   const totalArchives = archives.length;
-  const pendingCount = archives.filter((a) => a.status === 'menunggu_tinjauan').length;
+  const pendingCount = archives.filter(
+    (a) => a.status === 'menunggu_tinjauan' || a.status === 'perlu_koreksi'
+  ).length;
   const recordedCount = archives.filter((a) => a.status === 'tercatat').length;
 
   const steps = [
-    { num: '1', title: 'Input foto + sumber dan izin', desc: 'Validasi format dan hash asli' },
+    { num: '1', title: 'Input foto + sumber dan izin', desc: 'Validasi format dan hash SHA-256 asli' },
     { num: '2', title: 'Inferensi CNN + confidence / hasil SR', desc: 'Hasil AI hanya saran, bukan bukti keaslian' },
     { num: '3', title: 'Tinjauan kurator', desc: 'Setujui, koreksi kategori, atau tolak' },
-    { num: '4', title: 'Metadata final dan unggah IPFS', desc: 'Simpan original, derivative, metadata; dapat CID' },
+    { num: '4', title: 'Metadata final dan unggah IPFS', desc: 'Pin media dan metadata via backend; peroleh CID' },
     { num: '5', title: 'Tanda tangan wallet kurator', desc: 'MetaMask meminta persetujuan transaksi' },
     { num: '6', title: 'Validasi kontrak ERC-721 dan pencatatan versi', desc: 'Kurator sah, parent valid, duplikat ditolak' },
     { num: '7', title: 'Galeri, receipt, riwayat versi, verifikasi hash/CID', desc: 'Baca state dan receipt setelah konfirmasi' },
@@ -48,6 +57,15 @@ export const OverviewPage: React.FC = () => {
             <span>Lihat antrean kurasi</span>
             <ArrowRight className="w-4 h-4 text-ink-muted" />
           </button>
+          <button
+            type="button"
+            onClick={() => void syncArchives()}
+            disabled={isSyncingArchives}
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-btn bg-paper hover:bg-surface border border-border text-ink text-xs font-mono transition-colors min-h-[44px]"
+          >
+            <RotateCw className={`w-3.5 h-3.5 text-forest ${isSyncingArchives ? 'animate-spin' : ''}`} />
+            <span>{isSyncingArchives ? 'Menyinkronkan...' : 'Sinkronkan'}</span>
+          </button>
         </div>
       </div>
 
@@ -56,25 +74,25 @@ export const OverviewPage: React.FC = () => {
         <div className="bg-surface border border-border rounded-card p-6 shadow-subtle">
           <p className="text-xs font-mono text-ink-muted">Total arsip</p>
           <p className="text-3xl font-display font-bold text-ink mt-2">
-            {125 + totalArchives}
+            {totalArchives}
           </p>
-          <p className="text-xs font-mono text-ink-muted mt-2">Semua versi · demo</p>
+          <p className="text-xs font-mono text-ink-muted mt-2">Antrean &amp; token tersinkronisasi</p>
         </div>
 
         <div className="bg-surface border border-border rounded-card p-6 shadow-subtle">
           <p className="text-xs font-mono text-ink-muted">Menunggu tinjauan</p>
           <p className="text-3xl font-display font-bold text-ink mt-2">
-            {11 + pendingCount}
+            {pendingCount}
           </p>
           <p className="text-xs font-mono text-status-warning mt-2">Perlu tindakan kurator</p>
         </div>
 
         <div className="bg-surface border border-border rounded-card p-6 shadow-subtle">
-          <p className="text-xs font-mono text-ink-muted">Versi tercatat</p>
+          <p className="text-xs font-mono text-ink-muted">Versi tercatat on-chain</p>
           <p className="text-3xl font-display font-bold text-ink mt-2">
-            {84 + recordedCount}
+            {recordedCount}
           </p>
-          <p className="text-xs font-mono text-ink-muted mt-2">Catatan demo</p>
+          <p className="text-xs font-mono text-forest mt-2">{wallet.chainName}</p>
         </div>
       </div>
 
@@ -103,41 +121,59 @@ export const OverviewPage: React.FC = () => {
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-display font-bold text-ink">Aktivitas terbaru</h2>
-          <span className="text-xs font-mono text-ink-muted">Contoh data</span>
+          <span className="text-xs font-mono text-ink-muted">
+            {archives.length} arsip aktif
+          </span>
         </div>
-        <div className="bg-surface border border-border rounded-card overflow-x-auto shadow-subtle">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border bg-paper/50 text-[11px] font-mono text-ink-muted uppercase">
-              <tr>
-                <th className="py-3 px-4 font-medium">ID</th>
-                <th className="py-3 px-4 font-medium">Aktivitas</th>
-                <th className="py-3 px-4 font-medium">Status</th>
-                <th className="py-3 px-4 font-medium">Pembaruan</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/70 text-xs">
-              {archives.map((item) => (
-                <tr
-                  key={item.id}
-                  onClick={() => {
-                    setSelectedArchiveId(item.id);
-                    setActivePage('detail');
-                  }}
-                  className="hover:bg-paper/40 transition-colors cursor-pointer"
-                >
-                  <td className="py-3 px-4 font-mono font-medium text-forest">{item.id}</td>
-                  <td className="py-3 px-4 text-ink font-medium">
-                    Foto {item.finalCategory} · {item.title}
-                  </td>
-                  <td className="py-3 px-4">
-                    <StatusBadge status={item.status} isDemo />
-                  </td>
-                  <td className="py-3 px-4 font-mono text-ink-muted">{item.updatedAt}</td>
+
+        {archives.length === 0 ? (
+          <div className="bg-surface border border-border rounded-card p-10 text-center space-y-3 shadow-subtle">
+            <p className="text-xs font-mono text-ink-muted">
+              Belum ada pengajuan di antrean ataupun token yang diterbitkan di jaringan {wallet.chainName}.
+            </p>
+            <button
+              type="button"
+              onClick={() => setActivePage('unggah')}
+              className="px-4 py-2 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold"
+            >
+              Mulai Unggah Foto Pertama
+            </button>
+          </div>
+        ) : (
+          <div className="bg-surface border border-border rounded-card overflow-x-auto shadow-subtle">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border bg-paper/50 text-[11px] font-mono text-ink-muted uppercase">
+                <tr>
+                  <th className="py-3 px-4 font-medium">ID</th>
+                  <th className="py-3 px-4 font-medium">Aktivitas</th>
+                  <th className="py-3 px-4 font-medium">Status</th>
+                  <th className="py-3 px-4 font-medium">Pembaruan</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-border/70 text-xs">
+                {archives.map((item) => (
+                  <tr
+                    key={item.id}
+                    onClick={() => {
+                      setSelectedArchiveId(item.id);
+                      setActivePage('detail');
+                    }}
+                    className="hover:bg-paper/40 transition-colors cursor-pointer"
+                  >
+                    <td className="py-3 px-4 font-mono font-medium text-forest">{item.id}</td>
+                    <td className="py-3 px-4 text-ink font-medium">
+                      Foto {item.finalCategory} · {item.title}
+                    </td>
+                    <td className="py-3 px-4">
+                      <StatusBadge status={item.status} />
+                    </td>
+                    <td className="py-3 px-4 font-mono text-ink-muted">{item.updatedAt}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <FooterDisclaimer />

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Dict
+from typing import Any, Dict
 
 
 class PredictionResponse(BaseModel):
@@ -21,3 +21,16 @@ class HealthResponse(BaseModel):
     model_loaded: bool
     classifier_loaded: bool
     sr_loaded: bool
+    ipfs_configured: bool = False
+
+
+class IpfsPinResponse(BaseModel):
+    cid: str
+    uri: str
+    gateway_url: str
+    strategy: str
+
+
+class IpfsPinJsonRequest(BaseModel):
+    metadata: Dict[str, Any]
+    filename: str = "metadata.json"

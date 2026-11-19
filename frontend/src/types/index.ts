@@ -14,12 +14,18 @@ export interface ArchiveVersion {
   label: string;
   parentId: string | null;
   ipfsCid: string;
+  mediaCid?: string;
   metadataUri?: string;
   fileHash: string;
   onChainTokenId?: number;
   transactionHash?: string;
   requestId?: number;
   onChainVerified?: boolean;
+  ownerAddress?: string;
+  publisherAddress?: string;
+  fileName?: string;
+  fileSizeBytes?: number;
+  dimensions?: string;
   timestamp: string;
   methodLabel?: string;
   modelVersion?: string;
@@ -31,13 +37,19 @@ export interface ArchiveItem {
   title: string;
   creator: string;
   source: string;
+  sourceRef?: string;
   licenseInfo: string;
+  permissionAttachment?: string;
+  recipientAddress?: string;
+  chainId?: number;
   initialCategory: PhotoCategory;
   finalCategory: PhotoCategory;
   status: ArchiveStatus;
   aiPrediction: {
     category: PhotoCategory;
     confidence: number;
+    scores?: Record<PhotoCategory, number>;
+    modelVersion?: string;
     advisoryNote: string;
   };
   curatorNotes?: string;

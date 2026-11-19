@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, BookOpen, ArrowUpRight } from 'lucide-react';
+import { Search, Plus, BookOpen, ArrowUpRight, RotateCw, ImageOff } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
+import { resolveMediaUrl } from '../lib/api';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
 export const ArchiveGalleryPage: React.FC = () => {
@@ -13,6 +14,9 @@ export const ArchiveGalleryPage: React.FC = () => {
     setSelectedArchiveId,
     setActivePage,
     viewMode,
+    isSyncingArchives,
+    syncError,
+    syncArchives,
   } = useArchiveStore();
 
   const isPublicMode = viewMode === 'public';
@@ -48,12 +52,10 @@ export const ArchiveGalleryPage: React.FC = () => {
 
   const filteredArchives = archives
     .filter((item) => {
-      // Di sisi publik: HANYA arsip yang sudah resmi tercatat on-chain yang ditampilkan
       if (isPublicMode && item.status !== 'tercatat') {
         return false;
       }
 
-      // Di sisi workspace: kurator dapat memfilter berdasarkan status antrean
       if (!isPublicMode && statusFilter !== 'all' && item.status !== statusFilter) {
         return false;
       }
@@ -99,21 +101,39 @@ export const ArchiveGalleryPage: React.FC = () => {
           </h1>
           <p className="text-sm text-ink-muted font-sans max-w-2xl leading-relaxed">
             {isPublicMode
-              ? 'Telusuri foto, kenali sumbernya, dan ikuti setiap versi dalam satu arsip.'
+              ? 'Telusuri foto terverifikasi on-chain, kenali sumbernya, dan ikuti setiap versi dalam satu arsip.'
               : 'Pantau berkas masuk dari kontributor warga, periksa dokumen izin, dan terbitkan token versi ERC-721.'}
           </p>
         </div>
 
-        {/* Primary Action Button */}
-        <button
-          type="button"
-          onClick={() => setActivePage('unggah')}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle min-h-[42px] transition-colors self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4 text-ink" />
-          <span>{isPublicMode ? 'Unggah pengajuan' : 'Unggah arsip institusi'}</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => void syncArchives()}
+            disabled={isSyncingArchives}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-btn bg-surface hover:bg-paper border border-border text-ink text-xs font-mono shadow-subtle min-h-[42px] transition-colors"
+            title="Sinkronkan arsip dari backend dan smart contract"
+          >
+            <RotateCw className={`w-3.5 h-3.5 text-forest ${isSyncingArchives ? 'animate-spin' : ''}`} />
+            <span>{isSyncingArchives ? 'Sinkronisasi...' : 'Sinkronkan'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActivePage('unggah')}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle min-h-[42px] transition-colors"
+          >
+            <Plus className="w-4 h-4 text-ink" />
+            <span>{isPublicMode ? 'Unggah pengajuan' : 'Unggah arsip institusi'}</span>
+          </button>
+        </div>
       </div>
+
+      {syncError && (
+        <div className="p-3 rounded-btn bg-status-warningBg border border-border text-xs font-mono text-status-warning">
+          {syncError}
+        </div>
+      )}
 
       {/* Status Filter Tabs for Curator Workspace */}
       {!isPublicMode && (
@@ -141,7 +161,6 @@ export const ArchiveGalleryPage: React.FC = () => {
 
       {/* Search and Filters Toolbar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        {/* Search input with shortcut hint */}
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-3 pointer-events-none" />
           <input
@@ -158,7 +177,6 @@ export const ArchiveGalleryPage: React.FC = () => {
           </kbd>
         </div>
 
-        {/* Filter Pills and Sort Dropdown */}
         <div className="flex flex-wrap items-center gap-2 justify-between md:justify-end">
           <div className="flex items-center gap-1.5">
             {categories.map((cat) => {
@@ -180,7 +198,6 @@ export const ArchiveGalleryPage: React.FC = () => {
             })}
           </div>
 
-          {/* Sort Selector */}
           <div className="relative">
             <select
               value={sortOrder}
@@ -200,12 +217,12 @@ export const ArchiveGalleryPage: React.FC = () => {
         <span>
           {isPublicMode
             ? `${filteredArchives.length} arsip terverifikasi on-chain`
-            : `${filteredArchives.length} arsip dalam sistem`}
+            : `${filteredArchives.length} arsip tersinkronisasi`}
         </span>
         <span className="text-[11px]">
           {isPublicMode
-            ? 'Foto ilustratif, bukan bukti sejarah · Kategori final ditentukan kurator'
-            : 'Panel kurator · Menampilkan seluruh status berkas institusi'}
+            ? 'Kategori final ditentukan kurator · Bukti keaslian divalidasi kontrak'
+            : 'Panel kurator · Sinkron dengan antrean backend dan smart contract'}
         </span>
       </div>
 
@@ -213,21 +230,37 @@ export const ArchiveGalleryPage: React.FC = () => {
       {filteredArchives.length === 0 ? (
         <div className="bg-surface border border-border rounded-card p-12 text-center space-y-4 shadow-subtle max-w-lg mx-auto my-6">
           <p className="text-sm font-mono text-ink-muted">
-            {isPublicMode
+            {archives.length === 0
+              ? isPublicMode
+                ? 'Belum ada arsip yang diterbitkan ke smart contract pada jaringan aktif. Unggah pengajuan baru atau masuk ke Workspace Kurator untuk menerbitkan token.'
+                : 'Belum ada pengajuan di antrean ataupun token di smart contract jaringan aktif.'
+              : isPublicMode
               ? 'Tidak ada arsip terverifikasi yang cocok dengan kata kunci pencarian.'
               : 'Tidak ada arsip yang cocok dengan status atau kata kunci yang dipilih.'}
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              setSearchQuery('');
-              setCategoryFilter('all');
-              setStatusFilter('all');
-            }}
-            className="px-4 py-2 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle transition-colors"
-          >
-            Reset Pencarian & Filter
-          </button>
+          <div className="flex flex-wrap justify-center gap-2">
+            {archives.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => setActivePage('unggah')}
+                className="px-4 py-2 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle transition-colors"
+              >
+                Unggah Foto Baru
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setCategoryFilter('all');
+                  setStatusFilter('all');
+                }}
+                className="px-4 py-2 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle transition-colors"
+              >
+                Reset Pencarian &amp; Filter
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -235,6 +268,7 @@ export const ArchiveGalleryPage: React.FC = () => {
             const originalVer = item.versions.find((v) => v.versionType === 'original') || item.versions[0];
             const hasDerivative = item.versions.some((v) => v.versionType === 'derivative');
             const versionText = hasDerivative ? 'Asli + restorasi x4' : 'Versi asli';
+            const imgSrc = originalVer?.imageUrl ? resolveMediaUrl(originalVer.imageUrl) : '';
 
             return (
               <div
@@ -242,19 +276,24 @@ export const ArchiveGalleryPage: React.FC = () => {
                 onClick={() => handleSelectArchive(item.id)}
                 className="group bg-surface border border-border rounded-card overflow-hidden shadow-card hover:shadow-md hover:border-forest/60 transition-all cursor-pointer flex flex-col justify-between"
               >
-                {/* Image Container with Category Badge & Status Badge */}
-                <div className="relative aspect-[4/3] bg-paper overflow-hidden">
-                  <img
-                    src={originalVer.imageUrl}
-                    alt={item.title}
-                    loading="lazy"
-                    className="w-full h-full object-cover grayscale contrast-110 group-hover:scale-105 transition-transform duration-300"
-                  />
+                <div className="relative aspect-[4/3] bg-paper overflow-hidden flex items-center justify-center">
+                  {imgSrc ? (
+                    <img
+                      src={imgSrc}
+                      alt={item.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="text-center text-xs font-mono text-ink-muted p-4 space-y-1">
+                      <ImageOff className="w-6 h-6 mx-auto opacity-50" />
+                      <span>Media IPFS</span>
+                    </div>
+                  )}
                   <span className="absolute top-3 left-3 px-2.5 py-1 rounded-btn bg-surface/95 backdrop-blur-sm border border-border text-[11px] font-mono font-semibold text-ink capitalize shadow-subtle">
                     {item.finalCategory}
                   </span>
 
-                  {/* Status Badge in Workspace Mode */}
                   {!isPublicMode && (
                     <span
                       className={`absolute top-3 right-3 px-2 py-0.5 rounded-btn text-[10px] font-mono font-bold shadow-subtle ${
@@ -262,6 +301,8 @@ export const ArchiveGalleryPage: React.FC = () => {
                           ? 'bg-sage border border-forest text-forest'
                           : item.status === 'menunggu_tinjauan'
                           ? 'bg-gold-light border border-gold-border text-ink'
+                          : item.status === 'disetujui'
+                          ? 'bg-sage border border-sage-border text-forest'
                           : item.status === 'perlu_koreksi'
                           ? 'bg-status-warningBg border border-status-warning text-status-warning'
                           : 'bg-status-dangerBg border border-status-danger text-status-danger'
@@ -269,6 +310,8 @@ export const ArchiveGalleryPage: React.FC = () => {
                     >
                       {item.status === 'tercatat'
                         ? 'Tercatat'
+                        : item.status === 'disetujui'
+                        ? 'Disetujui'
                         : item.status === 'menunggu_tinjauan'
                         ? 'Menunggu Kurasi'
                         : item.status === 'perlu_koreksi'
@@ -278,12 +321,15 @@ export const ArchiveGalleryPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Card Body */}
                 <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-[11px] font-mono text-ink-muted">
                       <span>{item.id}</span>
-                      <span>{originalVer.onChainVerified ? `Token #${originalVer.onChainTokenId}` : 'Draf / Antrean'}</span>
+                      <span>
+                        {originalVer?.onChainTokenId
+                          ? `Token #${originalVer.onChainTokenId}`
+                          : 'Antrean Kurasi'}
+                      </span>
                     </div>
 
                     <h3 className="font-display font-bold text-base text-ink group-hover:text-forest transition-colors line-clamp-1">
@@ -295,12 +341,11 @@ export const ArchiveGalleryPage: React.FC = () => {
                       <span>{item.source}</span>
                     </div>
 
-                    <p className="text-[11px] font-mono text-ink-muted">
-                      Izin contoh · belum diverifikasi
+                    <p className="text-[11px] font-mono text-ink-muted line-clamp-1">
+                      Lisensi: {item.licenseInfo}
                     </p>
                   </div>
 
-                  {/* Footer Link Row */}
                   <div className="pt-3 border-t border-border/80 flex items-center justify-between text-xs font-mono text-ink-muted group-hover:text-forest transition-colors">
                     <span>
                       {!isPublicMode && (item.status === 'menunggu_tinjauan' || item.status === 'perlu_koreksi')
@@ -318,30 +363,10 @@ export const ArchiveGalleryPage: React.FC = () => {
 
       {/* Pagination Bar */}
       <div className="pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs font-mono text-ink-muted">
-        <span>Menampilkan 1–{filteredArchives.length} dari {filteredArchives.length} arsip contoh</span>
-
-        <div className="flex items-center gap-1.5 self-end sm:self-auto">
-          <button
-            type="button"
-            disabled
-            className="px-3 py-1.5 rounded-btn bg-surface border border-border text-ink-muted opacity-50 cursor-not-allowed text-xs font-sans"
-          >
-            Sebelumnya
-          </button>
-          <button
-            type="button"
-            className="w-8 h-8 rounded-btn bg-gold text-ink font-mono font-bold text-xs flex items-center justify-center shadow-subtle"
-          >
-            1
-          </button>
-          <button
-            type="button"
-            disabled
-            className="px-3 py-1.5 rounded-btn bg-surface border border-border text-ink-muted opacity-50 cursor-not-allowed text-xs font-sans"
-          >
-            Berikutnya
-          </button>
-        </div>
+        <span>
+          Menampilkan {filteredArchives.length > 0 ? 1 : 0}–{filteredArchives.length} dari{' '}
+          {filteredArchives.length} arsip
+        </span>
       </div>
 
       <FooterDisclaimer />

@@ -1,0 +1,32 @@
+[
+  {
+    "file": "0003.png",
+    "hr_size": [
+      2040,
+      1356
+    ],
+    "lr_size": [
+      510,
+      339
+    ],
+    "bicubic_psnr_db": 23.3,
+    "bicubic_ssim": 0.9474,
+    "realesrgan_psnr_db": 21.69,
+    "realesrgan_ssim": 0.9351
+  },
+  {
+    "file": "0006.png",
+    "hr_size": [
+      1356,
+      2040
+    ],
+    "lr_size": [
+      339,
+      510
+    ],
+    "bicubic_psnr_db": 30.79,
+    "bicubic_ssim": 0.9875,
+    "realesrgan_psnr_db": 28.93,
+    "realesrgan_ssim": 0.9856
+  }
+]

@@ -3,10 +3,9 @@ import { ArchiveStatus } from '../types';
 
 interface StatusBadgeProps {
   status: ArchiveStatus;
-  isDemo?: boolean;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, isDemo = false }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   switch (status) {
     case 'belum_diterbitkan':
       return (
@@ -17,7 +16,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, isDemo = false
     case 'menunggu_tinjauan':
       return (
         <span className="inline-flex items-center px-2.5 py-1 rounded-btn text-xs font-mono bg-status-warningBg border border-border text-status-warning font-medium">
-          Menunggu tinjauan {isDemo && '· demo'}
+          Menunggu tinjauan
         </span>
       );
     case 'disetujui':
@@ -41,11 +40,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, isDemo = false
     case 'tercatat':
       return (
         <span className="inline-flex items-center px-2.5 py-1 rounded-btn text-xs font-mono bg-sage text-forest font-medium border border-sage-border">
-          Tercatat {isDemo && '· demo'}
+          Tercatat on-chain
         </span>
       );
     default:
       return null;
   }
 };
-

@@ -1,37 +1,71 @@
-import React, { useState } from 'react';
-import { Check } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, RotateCw } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
+import { NETWORKS } from '../config/networks';
+import { API_BASE_URL } from '../lib/api';
+import { IPFS_GATEWAY } from '../lib/ipfs';
 import { truncateIdentifier } from '../lib/hash';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
-export const SettingsPage: React.FC = () => {
-  const { wallet, connectWallet, disconnectWallet, toggleRole } = useArchiveStore();
+const PREFS_STORAGE_KEY = 'sunnyrest_ui_prefs_v1';
 
-  const [displayName, setDisplayName] = useState('Pengguna SunnyRest');
-  const [email, setEmail] = useState('pengguna@example.test');
+export const SettingsPage: React.FC = () => {
+  const { wallet, connectWallet, disconnectWallet, syncArchives } = useArchiveStore();
+
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [language, setLanguage] = useState('id');
+  const [density, setDensity] = useState('comfortable');
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PREFS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.displayName === 'string') setDisplayName(parsed.displayName);
+        if (typeof parsed.email === 'string') setEmail(parsed.email);
+        if (typeof parsed.language === 'string') setLanguage(parsed.language);
+        if (typeof parsed.density === 'string') setDensity(parsed.density);
+      }
+    } catch {
+      // Abaikan storage tidak valid
+    }
+  }, []);
+
+  const persistPrefs = (notice: string) => {
+    try {
+      localStorage.setItem(
+        PREFS_STORAGE_KEY,
+        JSON.stringify({ displayName, email, language, density })
+      );
+    } catch {
+      // Abaikan kegagalan storage
+    }
+    setSavedNotice(notice);
+    setTimeout(() => setSavedNotice(null), 3000);
+  };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedNotice('Profil berhasil diperbarui.');
-    setTimeout(() => setSavedNotice(null), 3000);
+    persistPrefs('Profil lokal berhasil disimpan.');
   };
 
   const handleSavePrefs = (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedNotice('Preferensi antarmuka disimpan.');
-    setTimeout(() => setSavedNotice(null), 3000);
+    persistPrefs('Preferensi antarmuka disimpan.');
   };
+
+  const activeNet = NETWORKS[wallet.chainId];
 
   return (
     <div className="space-y-10">
-      {/* Header */}
       <div className="space-y-3">
         <p className="text-xs font-mono font-medium tracking-wider text-ink-muted uppercase">
-          SUNNYREST · ARSIP FOTO BERIZIN
+          SUNNYREST · PENGATURAN &amp; KONEKSI JARINGAN
         </p>
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-ink leading-tight max-w-4xl">
-          Kelola profil dan preferensi antarmuka. Pengaturan tidak mengubah aturan akses yang ditegakkan oleh kontrak.
+          Kelola preferensi lokal dan verifikasi peran wallet. Otorisasi kurator selalu ditegakkan langsung oleh smart contract.
         </h1>
       </div>
 
@@ -42,12 +76,11 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Profile & Interface Preferences (2 Columns) */}
+      {/* Profile & Interface Preferences */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        {/* Left: Profil */}
         <form onSubmit={handleSaveProfile} className="bg-surface border border-border rounded-card p-6 space-y-4 shadow-subtle">
           <h2 className="text-xs font-mono font-semibold tracking-wider text-ink-muted uppercase">
-            PROFIL
+            IDENTITAS KURATOR / KONTRIBUTOR LOKAL
           </h2>
 
           <div className="space-y-1.5">
@@ -59,33 +92,45 @@ export const SettingsPage: React.FC = () => {
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Masukkan nama tampilan Anda"
               className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none min-h-[44px]"
             />
           </div>
 
           <div className="space-y-1.5">
             <label htmlFor="email-input" className="text-xs font-mono text-ink-muted">
-              Email
+              Kontak / email instansi (opsional)
             </label>
             <input
               id="email-input"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="nama@instansi.ac.id"
               className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none min-h-[44px]"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-mono text-ink-muted">Peran saat ini</label>
-            <div className="p-2.5 rounded-btn bg-paper border border-border text-xs font-mono text-ink flex items-center justify-between">
-              <span>{wallet.isCurator ? 'Kurator terdaftar' : 'Kontributor (umum)'}</span>
+            <label className="text-xs font-mono text-ink-muted">Peran on-chain saat ini</label>
+            <div className="p-2.5 rounded-btn bg-paper border border-border text-xs font-mono text-ink flex items-center justify-between gap-2">
+              <span>
+                {wallet.isConnected
+                  ? wallet.isCurator
+                    ? 'CURATOR_ROLE Terverifikasi'
+                    : 'Akun Umum (Tanpa CURATOR_ROLE)'
+                  : 'Wallet belum terhubung'}
+              </span>
               <button
                 type="button"
-                onClick={toggleRole}
-                className="text-[11px] text-forest underline hover:text-forest-hover"
+                onClick={() => {
+                  void connectWallet();
+                  void syncArchives();
+                }}
+                className="inline-flex items-center gap-1 text-[11px] text-forest underline hover:text-forest-hover flex-shrink-0"
               >
-                Ubah simulasi peran
+                <RotateCw className="w-3 h-3" />
+                <span>Cek ulang on-chain</span>
               </button>
             </div>
           </div>
@@ -98,7 +143,6 @@ export const SettingsPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Right: Preferensi Antarmuka */}
         <form onSubmit={handleSavePrefs} className="bg-surface border border-border rounded-card p-6 space-y-4 shadow-subtle">
           <h2 className="text-xs font-mono font-semibold tracking-wider text-ink-muted uppercase">
             PREFERENSI ANTARMUKA
@@ -110,25 +154,12 @@ export const SettingsPage: React.FC = () => {
             </label>
             <select
               id="lang-select"
-              defaultValue="id"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none min-h-[44px]"
             >
               <option value="id">Bahasa Indonesia</option>
               <option value="en">English (Archival Catalog)</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label htmlFor="theme-select" className="text-xs font-mono text-ink-muted">
-              Tampilan
-            </label>
-            <select
-              id="theme-select"
-              defaultValue="light"
-              className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none min-h-[44px]"
-            >
-              <option value="light">Terang · Museum editorial</option>
-              <option value="warm">Kertas arsip · Warm paper</option>
             </select>
           </div>
 
@@ -138,7 +169,8 @@ export const SettingsPage: React.FC = () => {
             </label>
             <select
               id="density-select"
-              defaultValue="comfortable"
+              value={density}
+              onChange={(e) => setDensity(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none min-h-[44px]"
             >
               <option value="comfortable">Nyaman</option>
@@ -163,7 +195,7 @@ export const SettingsPage: React.FC = () => {
             <div>
               <p className="text-sm font-semibold text-ink">MetaMask / wallet EVM</p>
               <p className="text-xs text-ink-muted">
-                Wallet hanya diminta saat kurator akan menandatangani transaksi.
+                Otoritas kurator diperiksa langsung melalui fungsi `hasRole(CURATOR_ROLE, address)` di kontrak `ArsipFotoVersi`.
               </p>
             </div>
             <span
@@ -187,13 +219,15 @@ export const SettingsPage: React.FC = () => {
 
             <div className="p-3 rounded-btn bg-paper/60 border border-border space-y-1">
               <span className="text-ink-muted font-sans text-[11px]">Chain ID</span>
-              <p className="text-ink">{wallet.chainId} ({wallet.chainName})</p>
+              <p className="text-ink">
+                {wallet.chainId} ({wallet.chainName})
+              </p>
             </div>
 
             <div className="p-3 rounded-btn bg-paper/60 border border-border space-y-1">
               <span className="text-ink-muted font-sans text-[11px]">Peran kurator</span>
               <p className="text-forest font-semibold">
-                {wallet.isCurator ? 'Terdaftar (Dapat menandatangani)' : 'Bukan kurator (Akses terbatas)'}
+                {wallet.isCurator ? 'Terdaftar (CURATOR_ROLE)' : 'Bukan kurator'}
               </p>
             </div>
           </div>
@@ -201,7 +235,7 @@ export const SettingsPage: React.FC = () => {
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={connectWallet}
+              onClick={() => void connectWallet()}
               className="px-4 py-2 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold transition-colors min-h-[44px]"
             >
               {wallet.isConnected ? 'Sinkronkan ulang wallet' : 'Hubungkan MetaMask'}
@@ -216,32 +250,30 @@ export const SettingsPage: React.FC = () => {
               </button>
             )}
           </div>
-
-          <div className="p-3.5 rounded-btn bg-sage/60 border border-sage-border text-xs text-sage-text leading-relaxed">
-            Aplikasi harus memperbarui UI ketika akun atau jaringan berubah. Penolakan koneksi/transaksi ditampilkan sebagai status batal, bukan sukses.
-          </div>
         </div>
       </section>
 
       {/* Informasi Sistem */}
       <section className="space-y-4">
-        <h2 className="text-xl font-display font-bold text-ink">Informasi sistem</h2>
+        <h2 className="text-xl font-display font-bold text-ink">Konfigurasi sistem aktif</h2>
         <div className="bg-surface border border-border rounded-card p-6 divide-y divide-border/80 font-mono text-xs shadow-subtle">
-          <div className="py-2.5 flex items-center justify-between">
+          <div className="py-2.5 flex items-center justify-between gap-4">
             <span className="font-sans text-ink">Standar token</span>
-            <span className="text-ink font-semibold">ERC-721</span>
+            <span className="text-ink font-semibold">ERC-721 (ArsipFotoVersi)</span>
           </div>
-          <div className="py-2.5 flex items-center justify-between">
-            <span className="font-sans text-ink">Penyimpanan berkas</span>
-            <span className="text-ink font-semibold">IPFS</span>
+          <div className="py-2.5 flex items-center justify-between gap-4">
+            <span className="font-sans text-ink">Alamat kontrak ({wallet.chainName})</span>
+            <span className="text-ink select-all break-all text-right">
+              {activeNet?.contractAddress || 'Belum dikonfigurasi di .env'}
+            </span>
           </div>
-          <div className="py-2.5 flex items-center justify-between">
-            <span className="font-sans text-ink">Jaringan dev</span>
-            <span className="text-ink">Hardhat lokal</span>
+          <div className="py-2.5 flex items-center justify-between gap-4">
+            <span className="font-sans text-ink">Backend AI &amp; Proxy IPFS</span>
+            <span className="text-ink select-all break-all text-right">{API_BASE_URL}</span>
           </div>
-          <div className="py-2.5 flex items-center justify-between">
-            <span className="font-sans text-ink">Jaringan bukti akhir</span>
-            <span className="text-forest font-semibold">Sepolia</span>
+          <div className="py-2.5 flex items-center justify-between gap-4">
+            <span className="font-sans text-ink">Gateway IPFS Pembaca</span>
+            <span className="text-ink select-all break-all text-right">{IPFS_GATEWAY}</span>
           </div>
         </div>
       </section>

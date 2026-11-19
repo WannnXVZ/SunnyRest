@@ -1,15 +1,15 @@
 import { create } from 'zustand';
 import {
   ArchiveItem,
+  ArchiveStatus,
   ArchiveVersion,
   NavigationPage,
   PhotoCategory,
-  ArchiveStatus,
-  WalletState,
-  ViewMode,
   PublicTab,
+  ViewMode,
+  WalletState,
 } from '../types';
-import { NETWORKS, DEFAULT_CHAIN_ID } from '../config/networks';
+import { DEFAULT_CHAIN_ID, NETWORKS } from '../config/networks';
 import {
   connectMetaMaskWallet,
   getPassiveWalletState,
@@ -17,14 +17,29 @@ import {
   switchOrAddEthereumNetwork,
 } from '../lib/wallet';
 import {
+  OnChainTokenRecord,
   TxStage,
+  fetchAllOnChainVersions,
   fetchIsCurator,
   fetchRestorationFee,
+  normalizeHexHash,
   publishVersionOnChain,
   submitRestorationRequest,
 } from '../lib/contract';
-import { enhancePhotoWithSR } from '../lib/api';
-import { uploadMetadataToIpfs } from '../lib/ipfs';
+import {
+  createSubmissionOnServer,
+  enhancePhotoWithSR,
+  fetchSubmissions,
+  patchSubmissionOnServer,
+  resolveMediaUrl,
+  uploadDerivativeFileOnServer,
+} from '../lib/api';
+import {
+  fetchIpfsJson,
+  pinFileToIpfs,
+  pinMetadataToIpfs,
+  resolveIpfsUrl,
+} from '../lib/ipfs';
 import { computeFileSHA256 } from '../lib/hash';
 
 function formatCurrentDate(): string {
@@ -45,142 +60,65 @@ function formatCurrentTimestamp(): string {
   });
 }
 
-// Katalog contoh awal menggunakan aset lokal berlisensi dari dataset proyek (bukan URL eksternal).
-// Status awal ditandai jelas sebagai data contoh lokal sebelum diterbitkan ke node aktif.
-const INITIAL_ARCHIVES: ArchiveItem[] = [
-  {
-    id: 'SR-0105',
-    title: 'Bangunan Kolonial Arsip KITLV',
-    creator: 'Koleksi KITLV / Wikimedia Commons',
-    source: 'Dokumentasi arsip berlisensi terbuka',
-    licenseInfo: 'Public Domain / CC BY 4.0 (sampel katalog)',
-    initialCategory: 'bangunan',
-    finalCategory: 'bangunan',
-    status: 'menunggu_tinjauan',
-    aiPrediction: {
-      category: 'bangunan',
-      confidence: 0.91,
-      advisoryNote: 'Saran AI contoh: Bangunan. Menunggu penetapan dan tanda tangan kurator.',
-    },
-    curatorNotes: 'Sampel foto arsip menunggu peninjauan kurator dan pencatatan on-chain.',
-    originalHash: '4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a',
-    originalCid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
-    createdAt: '05 Nov 2026',
-    updatedAt: '05 Nov 2026',
-    versions: [
-      {
-        versionNumber: 1,
-        versionType: 'original',
-        label: 'Asli / Draf Katalog',
-        parentId: null,
-        ipfsCid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
-        fileHash: '4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a',
-        onChainVerified: false,
-        timestamp: '05 Nov 2026, 11.00',
-        imageUrl: '/samples/bangunan_kitlv.jpg',
-      },
-    ],
-  },
-  {
-    id: 'SR-0104',
-    title: 'Fasad Gedung Klasik',
-    creator: 'Dataset Intel Image Classification',
-    source: 'Koleksi arsitektur contoh (CC0)',
-    licenseInfo: 'CC0 / Kaggle Open Data (sampel)',
-    initialCategory: 'bangunan',
-    finalCategory: 'bangunan',
-    status: 'disetujui',
-    aiPrediction: {
-      category: 'bangunan',
-      confidence: 0.94,
-      advisoryNote: 'Saran AI contoh: Bangunan. Siap diterbitkan ke kontrak oleh kurator.',
-    },
-    curatorNotes: 'Sampel bangunan siap dicatat on-chain melalui Workspace Kurator.',
-    originalHash: '9f2a8c7b4d1e6f0853a92c8d7b6e1f402c5a9e8b0d3f61744a6c2e9d8b7051fa',
-    originalCid: 'bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku',
-    createdAt: '04 Nov 2026',
-    updatedAt: '04 Nov 2026',
-    versions: [
-      {
-        versionNumber: 1,
-        versionType: 'original',
-        label: 'Asli / Siap Mint',
-        parentId: null,
-        ipfsCid: 'bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku',
-        fileHash: '9f2a8c7b4d1e6f0853a92c8d7b6e1f402c5a9e8b0d3f61744a6c2e9d8b7051fa',
-        onChainVerified: false,
-        timestamp: '04 Nov 2026, 09.20',
-        imageUrl: '/samples/bangunan_contoh.jpg',
-      },
-    ],
-  },
-  {
-    id: 'SR-0103',
-    title: 'Bentang Pegunungan Terbuka',
-    creator: 'Dataset Intel Image Classification',
-    source: 'Koleksi lanskap contoh (CC0)',
-    licenseInfo: 'CC0 / Kaggle Open Data (sampel)',
-    initialCategory: 'lanskap',
-    finalCategory: 'lanskap',
-    status: 'menunggu_tinjauan',
-    aiPrediction: {
-      category: 'lanskap',
-      confidence: 0.89,
-      advisoryNote: 'Saran AI contoh: Lanskap. Keputusan tetap pada kurator.',
-    },
-    curatorNotes: 'Sampel lanskap dari dataset uji.',
-    originalHash: '7a9e2f6c91a83b4c1029384756abcdef1234567890abcdef1234567890abcdef',
-    originalCid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
-    createdAt: '03 Nov 2026',
-    updatedAt: '03 Nov 2026',
-    versions: [
-      {
-        versionNumber: 1,
-        versionType: 'original',
-        label: 'Asli / Draf Katalog',
-        parentId: null,
-        ipfsCid: 'bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi',
-        fileHash: '7a9e2f6c91a83b4c1029384756abcdef1234567890abcdef1234567890abcdef',
-        onChainVerified: false,
-        timestamp: '03 Nov 2026, 08.15',
-        imageUrl: '/samples/lanskap_contoh.jpg',
-      },
-    ],
-  },
-  {
-    id: 'SR-0102',
-    title: 'Aktivitas Warga Ruang Terbuka',
-    creator: 'Dataset COCO Person (CC BY 4.0)',
-    source: 'Koleksi orang contoh',
-    licenseInfo: 'CC BY 4.0 (sampel)',
-    initialCategory: 'orang',
-    finalCategory: 'orang',
-    status: 'menunggu_tinjauan',
-    aiPrediction: {
-      category: 'orang',
-      confidence: 0.92,
-      advisoryNote: 'Saran AI contoh: Orang. Keputusan tetap pada kurator.',
-    },
-    curatorNotes: 'Sampel kategori orang untuk demonstrasi kurasi.',
-    originalHash: 'c4e5a1b2d3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c',
-    originalCid: 'bafybeia4nwbffp6oxg7ujn3ojee6xedzdetojuzjevtenxquvykubafybe',
-    createdAt: '02 Nov 2026',
-    updatedAt: '02 Nov 2026',
-    versions: [
-      {
-        versionNumber: 1,
-        versionType: 'original',
-        label: 'Asli / Draf Katalog',
-        parentId: null,
-        ipfsCid: 'bafybeia4nwbffp6oxg7ujn3ojee6xedzdetojuzjevtenxquvykubafybe',
-        fileHash: 'c4e5a1b2d3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c',
-        onChainVerified: false,
-        timestamp: '02 Nov 2026, 14.30',
-        imageUrl: '/samples/orang_contoh.jpg',
-      },
-    ],
-  },
-];
+function formatUnixTimestamp(epochSec: number): string {
+  if (!epochSec) return formatCurrentTimestamp();
+  return new Date(epochSec * 1000).toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatUnixDate(epochSec: number): string {
+  if (!epochSec) return formatCurrentDate();
+  return new Date(epochSec * 1000).toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function normalizeCategory(raw: unknown): PhotoCategory {
+  if (raw === 'orang' || raw === 'bangunan' || raw === 'lanskap') {
+    return raw;
+  }
+  return 'bangunan';
+}
+
+function extractCidFromUri(uri: string): string {
+  if (!uri) return '';
+  return uri.startsWith('ipfs://') ? uri.slice('ipfs://'.length) : uri;
+}
+
+interface IpfsArchiveMetadata {
+  name?: string;
+  title?: string;
+  description?: string;
+  image?: string;
+  category_final?: string;
+  ai_category?: string;
+  ai_confidence?: number;
+  ai_scores?: Record<PhotoCategory, number>;
+  ai_model_version?: string;
+  creator?: string;
+  source?: string;
+  source_ref?: string;
+  license?: string;
+  method?: string;
+  request_id?: number | null;
+}
+
+function normalizeSubmissionMediaUrls(item: ArchiveItem): ArchiveItem {
+  return {
+    ...item,
+    versions: item.versions.map((ver) => ({
+      ...ver,
+      imageUrl: resolveMediaUrl(ver.imageUrl),
+    })),
+  };
+}
 
 interface ArchiveStore {
   viewMode: ViewMode;
@@ -189,6 +127,8 @@ interface ArchiveStore {
   activePage: NavigationPage;
   selectedArchiveId: string;
   archives: ArchiveItem[];
+  isSyncingArchives: boolean;
+  syncError: string | null;
   wallet: WalletState;
   restorationFeeEth: string | null;
   restorationFeeError: string | null;
@@ -197,35 +137,35 @@ interface ArchiveStore {
   statusFilter: string;
   isWorkspaceAuthenticated: boolean;
 
-  // View Mode & Auth
   setViewMode: (mode: ViewMode) => void;
   setPublicTab: (tab: PublicTab) => void;
   setPublicSelectedArchiveId: (id: string | null) => void;
   loginToWorkspace: () => Promise<{ success: boolean; reason?: string }>;
   logoutWorkspace: () => void;
 
-  // Navigation
   setActivePage: (page: NavigationPage) => void;
   setSelectedArchiveId: (id: string) => void;
 
-  // Search & Filter
   setSearchQuery: (query: string) => void;
   setCategoryFilter: (category: string) => void;
   setStatusFilter: (status: string) => void;
 
-  // On-chain & Archive Actions
+  syncArchives: () => Promise<void>;
   refreshRestorationFee: () => Promise<void>;
   initWalletSync: () => () => void;
-  addArchive: (
-    item: Omit<ArchiveItem, 'id' | 'createdAt' | 'updatedAt' | 'versions'>,
-    customImage?: string
-  ) => string;
+
+  submitArchive: (
+    file: File,
+    item: Omit<ArchiveItem, 'id' | 'createdAt' | 'updatedAt' | 'versions'>
+  ) => Promise<{ success: boolean; archiveId?: string; error?: string }>;
+
   updateArchiveStatus: (
     id: string,
     status: ArchiveStatus,
     finalCategory?: PhotoCategory,
     notes?: string
-  ) => void;
+  ) => Promise<void>;
+
   requestPaidRestoration: (
     id: string,
     onStage?: (stage: TxStage | 'enhancing') => void
@@ -237,6 +177,7 @@ interface ArchiveStore {
     feeEth?: string;
     newVersion?: ArchiveVersion;
   }>;
+
   runSuperResolutionForArchive: (
     id: string
   ) => Promise<{
@@ -247,6 +188,7 @@ interface ArchiveStore {
     requestId?: number;
     newVersion?: ArchiveVersion;
   }>;
+
   publishToBlockchain: (
     archiveId: string,
     onStage?: (stage: TxStage) => void
@@ -256,13 +198,13 @@ interface ArchiveStore {
     txHash?: string;
     tokenId?: number;
     gasUsed?: string;
+    mediaCid?: string;
+    metadataUri?: string;
   }>;
 
-  // Wallet
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   switchNetwork: (chainId: number) => Promise<void>;
-  toggleRole: () => void;
 }
 
 export const useArchiveStore = create<ArchiveStore>((set, get) => ({
@@ -270,8 +212,10 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   publicTab: 'semua',
   publicSelectedArchiveId: null,
   activePage: 'arsip',
-  selectedArchiveId: 'SR-0104',
-  archives: INITIAL_ARCHIVES,
+  selectedArchiveId: '',
+  archives: [],
+  isSyncingArchives: false,
+  syncError: null,
   restorationFeeEth: null,
   restorationFeeError: null,
   searchQuery: '',
@@ -292,6 +236,205 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   setPublicTab: (tab) => set({ publicTab: tab }),
   setPublicSelectedArchiveId: (id) => set({ publicSelectedArchiveId: id }),
 
+  syncArchives: async () => {
+    set({ isSyncingArchives: true, syncError: null });
+    const chainId = get().wallet.chainId;
+    const errors: string[] = [];
+
+    let offChainItems: ArchiveItem[] = [];
+    try {
+      offChainItems = await fetchSubmissions();
+    } catch (err) {
+      errors.push(
+        err instanceof Error
+          ? `Antrean backend tidak dapat dimuat (${err.message}).`
+          : 'Antrean backend tidak dapat dimuat.'
+      );
+    }
+
+    let onChainTokens: OnChainTokenRecord[] = [];
+    try {
+      if (NETWORKS[chainId]?.contractAddress) {
+        onChainTokens = await fetchAllOnChainVersions(chainId);
+      }
+    } catch (err) {
+      errors.push(
+        err instanceof Error
+          ? `RPC blockchain ${NETWORKS[chainId]?.name || chainId} tidak terjangkau (${err.message}).`
+          : 'RPC blockchain tidak terjangkau.'
+      );
+    }
+
+    const tokenById = new Map<number, OnChainTokenRecord>();
+    const tokenByHash = new Map<string, OnChainTokenRecord>();
+    for (const tok of onChainTokens) {
+      tokenById.set(tok.tokenId, tok);
+      tokenByHash.set(normalizeHexHash(tok.fileHash), tok);
+    }
+
+    const matchedTokenIds = new Set<number>();
+
+    const mergedOffChain = offChainItems.map((rawItem) => {
+      const item = normalizeSubmissionMediaUrls(rawItem);
+      const updatedVersions = item.versions.map((ver) => {
+        const matchedTok =
+          (ver.onChainTokenId ? tokenById.get(ver.onChainTokenId) : undefined) ||
+          tokenByHash.get(normalizeHexHash(ver.fileHash));
+
+        if (!matchedTok) return ver;
+        matchedTokenIds.add(matchedTok.tokenId);
+
+        return {
+          ...ver,
+          onChainTokenId: matchedTok.tokenId,
+          onChainVerified: true,
+          ownerAddress: matchedTok.owner,
+          publisherAddress: matchedTok.publisher,
+          metadataUri: ver.metadataUri || matchedTok.tokenUri,
+          ipfsCid: ver.ipfsCid || extractCidFromUri(matchedTok.tokenUri),
+          label:
+            ver.versionType === 'original'
+              ? `Asli / Token #${matchedTok.tokenId}`
+              : `Super-Resolution x4 / Token #${matchedTok.tokenId}`,
+        };
+      });
+
+      const origVer =
+        updatedVersions.find((v) => v.versionType === 'original') || updatedVersions[0];
+
+      // Pasangkan token turunan on-chain yang merujuk parentId token asli bila belum ada di array
+      if (origVer?.onChainTokenId) {
+        for (const tok of onChainTokens) {
+          if (tok.parentId === origVer.onChainTokenId && !matchedTokenIds.has(tok.tokenId)) {
+            matchedTokenIds.add(tok.tokenId);
+            updatedVersions.push({
+              versionNumber: updatedVersions.length + 1,
+              versionType: 'derivative',
+              label: `Super-Resolution x4 / Token #${tok.tokenId}`,
+              parentId: String(tok.parentId),
+              ipfsCid: extractCidFromUri(tok.tokenUri),
+              metadataUri: tok.tokenUri,
+              fileHash: normalizeHexHash(tok.fileHash),
+              onChainTokenId: tok.tokenId,
+              onChainVerified: true,
+              ownerAddress: tok.owner,
+              publisherAddress: tok.publisher,
+              timestamp: formatUnixTimestamp(tok.publishedAt),
+              methodLabel: 'Real-ESRGAN x4',
+              imageUrl: origVer.imageUrl,
+            });
+          }
+        }
+      }
+
+      const origOnChain = Boolean(origVer?.onChainTokenId);
+      return {
+        ...item,
+        status: origOnChain ? ('tercatat' as ArchiveStatus) : item.status,
+        versions: updatedVersions,
+      };
+    });
+
+    // Rekonstruksi arsip murni on-chain (mis. saat membuka dari browser lain atau jaringan Sepolia)
+    const remainingOriginals = onChainTokens.filter(
+      (tok) => tok.parentId === 0 && !matchedTokenIds.has(tok.tokenId)
+    );
+
+    const reconstructedOnChain = await Promise.all(
+      remainingOriginals.map(async (origTok) => {
+        const meta = await fetchIpfsJson<IpfsArchiveMetadata>(origTok.tokenUri);
+        const children = onChainTokens.filter(
+          (c) => c.parentId === origTok.tokenId && !matchedTokenIds.has(c.tokenId)
+        );
+
+        const origMediaUri = meta?.image ? resolveIpfsUrl(meta.image) : '';
+        const versions: ArchiveVersion[] = [
+          {
+            versionNumber: 1,
+            versionType: 'original',
+            label: `Asli / Token #${origTok.tokenId}`,
+            parentId: null,
+            ipfsCid: meta?.image ? extractCidFromUri(meta.image) : extractCidFromUri(origTok.tokenUri),
+            mediaCid: meta?.image ? extractCidFromUri(meta.image) : undefined,
+            metadataUri: origTok.tokenUri,
+            fileHash: normalizeHexHash(origTok.fileHash),
+            onChainTokenId: origTok.tokenId,
+            onChainVerified: true,
+            ownerAddress: origTok.owner,
+            publisherAddress: origTok.publisher,
+            timestamp: formatUnixTimestamp(origTok.publishedAt),
+            imageUrl: origMediaUri,
+          },
+        ];
+
+        for (const child of children) {
+          const childMeta = await fetchIpfsJson<IpfsArchiveMetadata>(child.tokenUri);
+          const childMediaUri = childMeta?.image ? resolveIpfsUrl(childMeta.image) : '';
+          versions.push({
+            versionNumber: versions.length + 1,
+            versionType: 'derivative',
+            label: `Super-Resolution x4 / Token #${child.tokenId}`,
+            parentId: String(child.parentId),
+            ipfsCid: childMeta?.image ? extractCidFromUri(childMeta.image) : extractCidFromUri(child.tokenUri),
+            mediaCid: childMeta?.image ? extractCidFromUri(childMeta.image) : undefined,
+            metadataUri: child.tokenUri,
+            fileHash: normalizeHexHash(child.fileHash),
+            onChainTokenId: child.tokenId,
+            requestId: childMeta?.request_id ?? undefined,
+            onChainVerified: true,
+            ownerAddress: child.owner,
+            publisherAddress: child.publisher,
+            timestamp: formatUnixTimestamp(child.publishedAt),
+            methodLabel: childMeta?.method || 'Real-ESRGAN x4',
+            imageUrl: childMediaUri || origMediaUri,
+          });
+        }
+
+        const finalCat = normalizeCategory(meta?.category_final);
+        const aiCat = normalizeCategory(meta?.ai_category || finalCat);
+        const rawTitle = meta?.name || meta?.title || `Token On-Chain #${origTok.tokenId}`;
+        const cleanTitle = rawTitle.replace(/\s*\(Original.*\)$/i, '').replace(/\s*\(Asli.*\)$/i, '');
+
+        return {
+          id: `ONCHAIN-${origTok.tokenId}`,
+          title: cleanTitle,
+          creator: meta?.creator || origTok.publisher,
+          source: meta?.source || `Smart Contract Token #${origTok.tokenId}`,
+          sourceRef: meta?.source_ref,
+          licenseInfo: meta?.license || 'Lihat metadata tokenURI',
+          chainId,
+          initialCategory: aiCat,
+          finalCategory: finalCat,
+          status: 'tercatat' as ArchiveStatus,
+          aiPrediction: {
+            category: aiCat,
+            confidence: typeof meta?.ai_confidence === 'number' ? meta.ai_confidence : 0,
+            scores: meta?.ai_scores,
+            modelVersion: meta?.ai_model_version,
+            advisoryNote: meta?.description || `Tercatat on-chain pada Token #${origTok.tokenId}.`,
+          },
+          curatorNotes: meta?.description,
+          originalHash: normalizeHexHash(origTok.fileHash),
+          originalCid: meta?.image ? extractCidFromUri(meta.image) : extractCidFromUri(origTok.tokenUri),
+          versions,
+          createdAt: formatUnixDate(origTok.publishedAt),
+          updatedAt: formatUnixDate(origTok.publishedAt),
+        } satisfies ArchiveItem;
+      })
+    );
+
+    const combined = [...mergedOffChain, ...reconstructedOnChain];
+    const currentSelected = get().selectedArchiveId;
+    const stillExists = combined.some((a) => a.id === currentSelected);
+
+    set({
+      archives: combined,
+      selectedArchiveId: stillExists ? currentSelected : combined[0]?.id || '',
+      isSyncingArchives: false,
+      syncError: errors.length > 0 ? errors.join(' ') : null,
+    });
+  },
+
   refreshRestorationFee: async () => {
     const chainId = get().wallet.chainId;
     try {
@@ -308,6 +451,7 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
 
   initWalletSync: () => {
     void get().refreshRestorationFee();
+    void get().syncArchives();
 
     void (async () => {
       const passive = await getPassiveWalletState();
@@ -322,6 +466,7 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
         } catch {
           isCurator = false;
         }
+        const chainChanged = activeChain !== get().wallet.chainId;
         set((s) => ({
           wallet: {
             ...s.wallet,
@@ -333,6 +478,10 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
             error: null,
           },
         }));
+        if (chainChanged) {
+          void get().refreshRestorationFee();
+          void get().syncArchives();
+        }
       }
     })();
 
@@ -389,6 +538,7 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
           },
         }));
         void get().refreshRestorationFee();
+        void get().syncArchives();
       }
     );
   },
@@ -430,6 +580,7 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
     }
 
     set({ isWorkspaceAuthenticated: true, viewMode: 'workspace' });
+    void get().syncArchives();
     return { success: true };
   },
 
@@ -444,24 +595,13 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   setCategoryFilter: (category) => set({ categoryFilter: category }),
   setStatusFilter: (status) => set({ statusFilter: status }),
 
-  addArchive: (itemData, customImage) => {
-    const nextNum = get().archives.length + 1;
-    const newId = `SR-ARCH-00${nextNum < 10 ? '0' + nextNum : nextNum}`;
+  submitArchive: async (file, itemData) => {
     const nowDate = formatCurrentDate();
     const nowTs = formatCurrentTimestamp();
 
-    const fallbackImage =
-      itemData.initialCategory === 'orang'
-        ? '/samples/orang_contoh.jpg'
-        : itemData.initialCategory === 'lanskap'
-        ? '/samples/lanskap_contoh.jpg'
-        : '/samples/bangunan_contoh.jpg';
-
-    const imageUrl = customImage || fallbackImage;
-
-    const newArchive: ArchiveItem = {
+    const payload: Omit<ArchiveItem, 'id'> = {
       ...itemData,
-      id: newId,
+      chainId: get().wallet.chainId,
       createdAt: nowDate,
       updatedAt: nowDate,
       versions: [
@@ -470,39 +610,69 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
           versionType: 'original',
           label: 'Original · versi sumber',
           parentId: null,
-          ipfsCid: itemData.originalCid,
+          ipfsCid: '',
           fileHash: itemData.originalHash,
           onChainVerified: false,
+          fileName: file.name,
+          fileSizeBytes: file.size,
           timestamp: nowTs,
-          imageUrl,
+          imageUrl: '',
         },
       ],
     };
 
-    set((state) => ({
-      archives: [newArchive, ...state.archives],
-      selectedArchiveId: newId,
-    }));
-
-    return newId;
+    try {
+      const saved = await createSubmissionOnServer(file, payload);
+      const hydrated = normalizeSubmissionMediaUrls(saved);
+      set((state) => ({
+        archives: [hydrated, ...state.archives.filter((a) => a.id !== hydrated.id)],
+        selectedArchiveId: hydrated.id,
+      }));
+      return { success: true, archiveId: hydrated.id };
+    } catch (err) {
+      return {
+        success: false,
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Gagal menyimpan pengajuan ke antrean backend.',
+      };
+    }
   },
 
-  updateArchiveStatus: (id, status, finalCategory, notes) => {
+  updateArchiveStatus: async (id, status, finalCategory, notes) => {
     const nowDate = formatCurrentDate();
+    const target = get().archives.find((a) => a.id === id);
+    const nextFinalCategory = finalCategory || target?.finalCategory || 'bangunan';
+    const nextNotes = notes !== undefined ? notes : target?.curatorNotes;
+
     set((state) => ({
       archives: state.archives.map((item) => {
         if (item.id === id) {
           return {
             ...item,
             status,
-            finalCategory: finalCategory || item.finalCategory,
-            curatorNotes: notes !== undefined ? notes : item.curatorNotes,
+            finalCategory: nextFinalCategory,
+            curatorNotes: nextNotes,
             updatedAt: nowDate,
           };
         }
         return item;
       }),
     }));
+
+    if (!id.startsWith('ONCHAIN-')) {
+      try {
+        await patchSubmissionOnServer(id, {
+          status,
+          finalCategory: nextFinalCategory,
+          curatorNotes: nextNotes,
+          updatedAt: nowDate,
+        });
+      } catch {
+        // Optimistic update tetap terjaga di state saat sesi berlangsung
+      }
+    }
   },
 
   requestPaidRestoration: async (id, onStage) => {
@@ -550,24 +720,53 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
 
       // 3. Hitung SHA-256 berkas hasil SR secara nyata
       const srHash = await computeFileSHA256(srResult.blob);
+
+      // 4. Simpan PNG hasil SR ke backend penyimpanan pra-mint agar persisten saat refresh
+      let storedSrUrl = srResult.imageUrl;
+      let storedDimensions: string | undefined;
+      if (!archive.id.startsWith('ONCHAIN-')) {
+        try {
+          const uploaded = await uploadDerivativeFileOnServer(
+            archive.id,
+            srResult.blob,
+            `${archive.id}_sr_x${srResult.scale}.png`
+          );
+          storedSrUrl = uploaded.url;
+          storedDimensions = uploaded.dimensions;
+        } catch {
+          // Gunakan ObjectURL sesi jika penyimpanan sekunder gagal
+        }
+      }
+
       const nowDate = formatCurrentDate();
       const nowTs = formatCurrentTimestamp();
 
-      const newVersion: ArchiveVersion = {
+      const rawDerivativeVersion: ArchiveVersion = {
         versionNumber: archive.versions.length + 1,
         versionType: 'derivative',
-        label: `Super-Resolution x${srResult.scale} (Draf Menunggu Terbit)`,
+        label: `Super-Resolution x${srResult.scale} (Menunggu Terbit On-Chain)`,
         parentId: String(originalVer.onChainTokenId),
-        ipfsCid: `bafybeisr${srHash.slice(0, 24)}`,
+        ipfsCid: '',
         fileHash: srHash,
         requestId: payResult.requestId,
         transactionHash: payResult.txHash,
         onChainVerified: false,
+        fileName: `${archive.id}_sr_x${srResult.scale}.png`,
+        fileSizeBytes: srResult.blob.size,
+        dimensions: storedDimensions,
         timestamp: nowTs,
         methodLabel: `${srResult.method} x${srResult.scale} (${srResult.modelVersion}${srResult.isMock ? ' · mock' : ''})`,
         modelVersion: srResult.modelVersion,
-        imageUrl: srResult.imageUrl,
+        imageUrl: storedSrUrl,
       };
+
+      const hydratedVersion: ArchiveVersion = {
+        ...rawDerivativeVersion,
+        imageUrl: resolveMediaUrl(storedSrUrl),
+      };
+
+      const updatedVersionsRaw = [...archive.versions, rawDerivativeVersion];
+      const updatedVersionsHydrated = [...archive.versions, hydratedVersion];
 
       set((state) => ({
         archives: state.archives.map((item) =>
@@ -576,19 +775,32 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
                 ...item,
                 paymentTxHash: payResult.txHash,
                 restorationFeePaid: `${payResult.feeEth} ETH`,
-                versions: [...item.versions, newVersion],
+                versions: updatedVersionsHydrated,
                 updatedAt: nowDate,
               }
             : item
         ),
       }));
 
+      if (!archive.id.startsWith('ONCHAIN-')) {
+        try {
+          await patchSubmissionOnServer(archive.id, {
+            paymentTxHash: payResult.txHash,
+            restorationFeePaid: `${payResult.feeEth} ETH`,
+            versions: updatedVersionsRaw,
+            updatedAt: nowDate,
+          });
+        } catch {
+          // State lokal sudah menyimpan versi SR & requestId
+        }
+      }
+
       return {
         success: true,
         txHash: payResult.txHash,
         requestId: payResult.requestId,
         feeEth: payResult.feeEth,
-        newVersion,
+        newVersion: hydratedVersion,
       };
     } catch (err) {
       return {
@@ -623,47 +835,70 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
     const archive = get().archives.find((a) => a.id === archiveId);
     if (!archive) return { success: false, error: 'Arsip tidak ditemukan.' };
 
-    const versionToPublish =
-      archive.versions.find((v) => !v.onChainTokenId) || archive.versions[0];
+    const originalVer = archive.versions.find((v) => v.versionType === 'original');
+    const unpublishedOriginal = originalVer && !originalVer.onChainTokenId ? originalVer : undefined;
+    const unpublishedDerivative = archive.versions.find(
+      (v) => v.versionType === 'derivative' && !v.onChainTokenId
+    );
+
+    const versionToPublish = unpublishedOriginal || unpublishedDerivative;
     if (!versionToPublish) {
-      return { success: false, error: 'Tidak ada versi berkas untuk diterbitkan.' };
+      return {
+        success: false,
+        error: 'Semua versi berkas pada arsip ini sudah tercatat on-chain.',
+      };
     }
 
     try {
       const chainId = get().wallet.chainId;
       const isDerivative = versionToPublish.versionType === 'derivative';
-      const originalVer = archive.versions.find(
-        (v) => v.versionType === 'original'
-      );
       const numericParentId = isDerivative
         ? originalVer?.onChainTokenId || Number(versionToPublish.parentId || 0)
         : 0;
 
-      // 1. Unggah metadata ke IPFS (atau draft URI jika daemon IPFS belum aktif)
+      // 1. Pin berkas foto (original/SR PNG) ke IPFS melalui proxy backend
+      onStage?.('pinning_ipfs');
+      const mediaFetchUrl = resolveMediaUrl(versionToPublish.imageUrl);
+      const mediaRes = await fetch(mediaFetchUrl);
+      if (!mediaRes.ok) {
+        throw new Error('Gagal membaca berkas media sumber untuk diunggah ke IPFS.');
+      }
+      const mediaBlob = await mediaRes.blob();
+      const mediaFilename =
+        versionToPublish.fileName ||
+        `${archive.id}_${isDerivative ? 'sr_x4' : 'original'}.png`;
+      const mediaPin = await pinFileToIpfs(mediaBlob, mediaFilename);
+
+      // 2. Pin metadata.json yang merujuk media URI IPFS nyata
       const metadataPayload = {
-        name: `${archive.title} (${versionToPublish.label})`,
+        name: `${archive.title} (${isDerivative ? 'Super-Resolution x4' : 'Original'})`,
+        title: archive.title,
         description: archive.curatorNotes || archive.source,
-        image: `ipfs://${versionToPublish.ipfsCid}`,
+        image: mediaPin.uri,
         category_final: archive.finalCategory,
         ai_category: archive.aiPrediction.category,
         ai_confidence: archive.aiPrediction.confidence,
+        ai_scores: archive.aiPrediction.scores || null,
+        ai_model_version: archive.aiPrediction.modelVersion || null,
         creator: archive.creator,
         source: archive.source,
+        source_ref: archive.sourceRef || null,
         license: archive.licenseInfo,
         file_hash_sha256: versionToPublish.fileHash,
         parent_id: numericParentId,
         request_id: versionToPublish.requestId || null,
         method: versionToPublish.methodLabel || null,
       };
-      const ipfsRes = await uploadMetadataToIpfs(
+      const metaPin = await pinMetadataToIpfs(
         metadataPayload,
-        versionToPublish.fileHash
+        `${archive.id}_v${versionToPublish.versionNumber}_metadata.json`
       );
 
-      // 2. Panggil kontrak ArsipFotoVersi (terbitkanVersi atau terbitkanVersiRestorasi)
+      // 3. Panggil kontrak ArsipFotoVersi (terbitkanVersi atau terbitkanVersiRestorasi)
       const txRes = await publishVersionOnChain({
         chainId,
-        uri: ipfsRes.metadataUri,
+        to: archive.recipientAddress || undefined,
+        uri: metaPin.uri,
         fileHash: versionToPublish.fileHash,
         parentId: numericParentId,
         requestId: versionToPublish.requestId,
@@ -671,39 +906,67 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
       });
 
       const nowDate = formatCurrentDate();
+      const ipfsResolvedUrl = resolveIpfsUrl(mediaPin.uri);
+
+      const updateVersionsForStorage = (vers: ArchiveVersion[], useResolvedUrl: boolean) =>
+        vers.map((ver) =>
+          ver.versionNumber === versionToPublish.versionNumber
+            ? {
+                ...ver,
+                label:
+                  ver.versionType === 'original'
+                    ? `Asli / Token #${txRes.tokenId}`
+                    : `Super-Resolution x4 / Token #${txRes.tokenId}`,
+                onChainTokenId: txRes.tokenId,
+                transactionHash: txRes.txHash,
+                metadataUri: metaPin.uri,
+                mediaCid: mediaPin.cid,
+                ipfsCid: mediaPin.cid,
+                ownerAddress: txRes.recipient,
+                publisherAddress: txRes.publisher,
+                onChainVerified: true,
+                imageUrl: useResolvedUrl ? ipfsResolvedUrl : mediaPin.uri,
+              }
+            : ver
+        );
+
+      const newOriginalCid = !isDerivative ? mediaPin.cid : archive.originalCid;
+
       set((state) => ({
         archives: state.archives.map((item) => {
           if (item.id !== archiveId) return item;
-          const updatedVersions = item.versions.map((ver) =>
-            ver.versionNumber === versionToPublish.versionNumber
-              ? {
-                  ...ver,
-                  label:
-                    ver.versionType === 'original'
-                      ? `Asli / Token #${txRes.tokenId}`
-                      : `Super-Resolution x4 / Token #${txRes.tokenId}`,
-                  onChainTokenId: txRes.tokenId,
-                  transactionHash: txRes.txHash,
-                  metadataUri: ipfsRes.metadataUri,
-                  ipfsCid: ipfsRes.cid,
-                  onChainVerified: true,
-                }
-              : ver
-          );
           return {
             ...item,
             status: 'tercatat' as ArchiveStatus,
-            versions: updatedVersions,
+            originalCid: newOriginalCid,
+            chainId,
+            versions: updateVersionsForStorage(item.versions, true),
             updatedAt: nowDate,
           };
         }),
       }));
+
+      if (!archiveId.startsWith('ONCHAIN-')) {
+        try {
+          await patchSubmissionOnServer(archiveId, {
+            status: 'tercatat',
+            originalCid: newOriginalCid,
+            chainId,
+            versions: updateVersionsForStorage(archive.versions, false),
+            updatedAt: nowDate,
+          });
+        } catch {
+          // State on-chain tetap tersinkronisasi dari smart contract
+        }
+      }
 
       return {
         success: true,
         txHash: txRes.txHash,
         tokenId: txRes.tokenId,
         gasUsed: txRes.gasUsed,
+        mediaCid: mediaPin.cid,
+        metadataUri: metaPin.uri,
       };
     } catch (err) {
       return {
@@ -747,6 +1010,7 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
         },
       }));
       void get().refreshRestorationFee();
+      void get().syncArchives();
     } catch (err: unknown) {
       const errorMsg =
         err instanceof Error
@@ -795,6 +1059,7 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
         },
       }));
       void get().refreshRestorationFee();
+      void get().syncArchives();
     } catch (err) {
       set((state) => ({
         wallet: {
@@ -804,16 +1069,5 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
         },
       }));
     }
-  },
-
-  toggleRole: () => {
-    // Tetap hormati status on-chain saat wallet terhubung; hanya info UI jika belum terhubung
-    if (get().wallet.isConnected) return;
-    set((state) => ({
-      wallet: {
-        ...state.wallet,
-        isCurator: !state.wallet.isCurator,
-      },
-    }));
   },
 }));

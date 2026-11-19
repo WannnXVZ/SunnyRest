@@ -4,6 +4,7 @@ import {
   Interface,
   JsonRpcProvider,
   formatEther,
+  isAddress,
   keccak256,
   toUtf8Bytes,
 } from 'ethers';
@@ -11,9 +12,23 @@ import ArsipFotoVersiABI from '../abi/ArsipFotoVersi.json';
 import { NETWORKS } from '../config/networks';
 import { getEthereumProvider } from './wallet';
 
-export type TxStage = 'waiting_wallet' | 'waiting_confirmation';
+export type TxStage = 'pinning_ipfs' | 'waiting_wallet' | 'waiting_confirmation';
+
+export interface OnChainTokenRecord {
+  tokenId: number;
+  parentId: number;
+  fileHash: string;
+  publisher: string;
+  publishedAt: number;
+  owner: string;
+  tokenUri: string;
+}
 
 const contractInterface = new Interface(ArsipFotoVersiABI);
+
+export function normalizeHexHash(hashHex: string): string {
+  return (hashHex || '').trim().replace(/^0x/i, '').toLowerCase();
+}
 
 export function normalizeBytes32Hash(hashHex: string): string {
   const clean = hashHex.trim().replace(/^0x/i, '');
@@ -30,7 +45,7 @@ export function getContractAddress(chainId: number): string {
   }
   if (!net.contractAddress) {
     throw new Error(
-      `Alamat kontrak untuk ${net.name} belum dikonfigurasi (deploy kontrak terlebih dahulu dan isi deployments).`
+      `Alamat kontrak untuk ${net.name} belum dikonfigurasi (deploy kontrak terlebih dahulu dan isi alamat di .env).`
     );
   }
   return net.contractAddress;
@@ -92,7 +107,6 @@ export function parseContractError(err: unknown): string {
     return 'Saldo ETH tidak mencukupi untuk membayar biaya layanan dan gas jaringan.';
   }
 
-  // Decode custom Solidity error from revert data if present
   if (typeof errObj.data === 'string' && errObj.data.startsWith('0x')) {
     try {
       const parsed = contractInterface.parseError(errObj.data);
@@ -147,6 +161,15 @@ export async function fetchIsCurator(
   return (await contract.hasRole(role, account)) as boolean;
 }
 
+export async function checkHashUsedOnChain(
+  chainId: number,
+  fileHash: string
+): Promise<boolean> {
+  const contract = getReadOnlyContract(chainId);
+  const bytes32Hash = normalizeBytes32Hash(fileHash);
+  return Boolean(await contract.hashTerpakai(bytes32Hash));
+}
+
 export async function fetchPermintaan(chainId: number, requestId: number) {
   const contract = getReadOnlyContract(chainId);
   const res = await contract.getPermintaan(requestId);
@@ -159,7 +182,10 @@ export async function fetchPermintaan(chainId: number, requestId: number) {
   };
 }
 
-export async function fetchVersiOnChain(chainId: number, tokenId: number) {
+export async function fetchVersiOnChain(
+  chainId: number,
+  tokenId: number
+): Promise<OnChainTokenRecord> {
   const contract = getReadOnlyContract(chainId);
   const [versi, owner, uri] = await Promise.all([
     contract.getVersi(tokenId),
@@ -167,6 +193,7 @@ export async function fetchVersiOnChain(chainId: number, tokenId: number) {
     contract.tokenURI(tokenId),
   ]);
   return {
+    tokenId,
     parentId: Number(versi.parentId),
     fileHash: versi.fileHash as string,
     publisher: versi.publisher as string,
@@ -174,6 +201,52 @@ export async function fetchVersiOnChain(chainId: number, tokenId: number) {
     owner: owner as string,
     tokenUri: uri as string,
   };
+}
+
+export async function fetchAllOnChainVersions(
+  chainId: number
+): Promise<OnChainTokenRecord[]> {
+  const net = NETWORKS[chainId];
+  if (!net || !net.contractAddress) return [];
+
+  const contract = getReadOnlyContract(chainId);
+  const nextId = Number(await contract.nextId());
+  if (!Number.isFinite(nextId) || nextId <= 1) {
+    return [];
+  }
+
+  const tokenIds = Array.from({ length: nextId - 1 }, (_, i) => i + 1);
+  const records: OnChainTokenRecord[] = [];
+  const batchSize = 8;
+
+  for (let i = 0; i < tokenIds.length; i += batchSize) {
+    const slice = tokenIds.slice(i, i + batchSize);
+    const settled = await Promise.allSettled(
+      slice.map(async (tid) => {
+        const [versi, owner, uri] = await Promise.all([
+          contract.getVersi(tid),
+          contract.ownerOf(tid),
+          contract.tokenURI(tid),
+        ]);
+        return {
+          tokenId: tid,
+          parentId: Number(versi.parentId),
+          fileHash: versi.fileHash as string,
+          publisher: versi.publisher as string,
+          publishedAt: Number(versi.publishedAt),
+          owner: owner as string,
+          tokenUri: uri as string,
+        } satisfies OnChainTokenRecord;
+      })
+    );
+    for (const item of settled) {
+      if (item.status === 'fulfilled') {
+        records.push(item.value);
+      }
+    }
+  }
+
+  return records;
 }
 
 export async function submitRestorationRequest(
@@ -240,10 +313,12 @@ export async function publishVersionOnChain(params: {
   tokenId: number;
   gasUsed: string;
   publisher: string;
+  recipient: string;
 }> {
   try {
     const { contract, signerAddress } = await getSignerContract(params.chainId);
-    const recipient = params.to || signerAddress;
+    const candidateTo = params.to?.trim();
+    const recipient = candidateTo && isAddress(candidateTo) ? candidateTo : signerAddress;
     const hashBytes32 = normalizeBytes32Hash(params.fileHash);
 
     params.onStage?.('waiting_wallet');
@@ -286,6 +361,7 @@ export async function publishVersionOnChain(params: {
       tokenId,
       gasUsed: receipt.gasUsed ? receipt.gasUsed.toString() : '0',
       publisher: signerAddress,
+      recipient,
     };
   } catch (err) {
     throw new Error(parseContractError(err));
