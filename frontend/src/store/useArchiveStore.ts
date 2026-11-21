@@ -301,6 +301,11 @@ interface ArchiveStore {
     notes?: string
   ) => Promise<void>;
 
+  updateArchiveVisibility: (
+    id: string,
+    visibility: 'public' | 'private'
+  ) => Promise<{ success: boolean; error?: string }>;
+
   requestPaidRestoration: (
     id: string,
     onStage?: (stage: TxStage | 'enhancing') => void
@@ -625,6 +630,10 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
         if (!accounts || accounts.length === 0) {
           set((s) => ({
             isWorkspaceAuthenticated: false,
+            viewMode:
+              s.viewMode === 'workspace' || s.viewMode === 'contributor' ? 'public' : s.viewMode,
+            activePage:
+              s.viewMode === 'workspace' || s.viewMode === 'contributor' ? 'arsip' : s.activePage,
             wallet: {
               ...s.wallet,
               address: null,
@@ -642,15 +651,22 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
         } catch {
           isCurator = false;
         }
-        set((s) => ({
-          wallet: {
-            ...s.wallet,
-            address: addr,
-            isConnected: true,
-            isCurator,
-            error: null,
-          },
-        }));
+        set((s) => {
+          const nextWorkspaceAuth = s.isWorkspaceAuthenticated && isCurator;
+          const downgradedToContributor = s.viewMode === 'workspace' && !isCurator;
+          return {
+            isWorkspaceAuthenticated: nextWorkspaceAuth,
+            viewMode: downgradedToContributor ? 'contributor' : s.viewMode,
+            activePage: downgradedToContributor ? 'ringkasan' : s.activePage,
+            wallet: {
+              ...s.wallet,
+              address: addr,
+              isConnected: true,
+              isCurator,
+              error: null,
+            },
+          };
+        });
       },
       async (newChainId) => {
         const net = NETWORKS[newChainId];
@@ -663,15 +679,22 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
             isCurator = false;
           }
         }
-        set((s) => ({
-          wallet: {
-            ...s.wallet,
-            chainId: newChainId,
-            chainName: net ? net.name : `Jaringan Tidak Didukung (${newChainId})`,
-            isCurator,
-            error: net ? null : `Jaringan Chain ID ${newChainId} tidak didukung oleh aplikasi.`,
-          },
-        }));
+        set((s) => {
+          const nextWorkspaceAuth = s.isWorkspaceAuthenticated && isCurator;
+          const leaveWorkspace = s.viewMode === 'workspace' && !isCurator;
+          return {
+            isWorkspaceAuthenticated: nextWorkspaceAuth,
+            viewMode: leaveWorkspace ? 'public' : s.viewMode,
+            activePage: leaveWorkspace ? 'arsip' : s.activePage,
+            wallet: {
+              ...s.wallet,
+              chainId: newChainId,
+              chainName: net ? net.name : `Jaringan Tidak Didukung (${newChainId})`,
+              isCurator,
+              error: net ? null : `Jaringan Chain ID ${newChainId} tidak didukung oleh aplikasi.`,
+            },
+          };
+        });
         void get().refreshRestorationFee();
         void get().syncArchives();
       }
@@ -720,7 +743,7 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   },
 
   logoutWorkspace: () => {
-    set({ isWorkspaceAuthenticated: false, viewMode: 'public' });
+    set({ isWorkspaceAuthenticated: false, viewMode: 'public', activePage: 'arsip' });
   },
 
   setActivePage: (page) => set({ activePage: page }),
@@ -807,6 +830,60 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
       } catch {
         // Optimistic update tetap terjaga di state saat sesi berlangsung
       }
+    }
+  },
+
+  updateArchiveVisibility: async (id, visibility) => {
+    if (id.startsWith('ONCHAIN-')) {
+      return {
+        success: false,
+        error:
+          'Arsip hasil sinkronisasi on-chain langsung tanpa antrean backend tidak dapat diubah visibilitas katalognya.',
+      };
+    }
+
+    const nowDate = formatCurrentDate();
+    const isPrivate = visibility === 'private';
+
+    try {
+      const saved = await patchSubmissionOnServer(id, {
+        visibility,
+        isPrivate,
+        updatedAt: nowDate,
+      });
+
+      const persistedPrivate = saved.visibility === 'private' || Boolean(saved.isPrivate);
+      const persistedMatches =
+        saved.visibility === visibility && persistedPrivate === isPrivate;
+      if (!persistedMatches) {
+        return {
+          success: false,
+          error:
+            'Server backend belum menyimpan perubahan visibilitas. Silakan restart server backend (uvicorn) agar pembaruan PATCHABLE_FIELDS aktif.',
+        };
+      }
+
+      set((state) => ({
+        archives: state.archives.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                visibility: saved.visibility,
+                isPrivate: Boolean(saved.isPrivate),
+                updatedAt: saved.updatedAt || nowDate,
+              }
+            : item
+        ),
+      }));
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Gagal memperbarui visibilitas arsip di backend.',
+      };
     }
   },
 
@@ -1164,6 +1241,14 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   disconnectWallet: () => {
     set((state) => ({
       isWorkspaceAuthenticated: false,
+      viewMode:
+        state.viewMode === 'workspace' || state.viewMode === 'contributor'
+          ? 'public'
+          : state.viewMode,
+      activePage:
+        state.viewMode === 'workspace' || state.viewMode === 'contributor'
+          ? 'arsip'
+          : state.activePage,
       wallet: {
         ...state.wallet,
         address: null,

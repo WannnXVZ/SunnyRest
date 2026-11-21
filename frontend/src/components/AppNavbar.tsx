@@ -149,14 +149,10 @@ export const AppNavbar: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setViewMode('public');
-                setActivePage('pemohon');
+                setViewMode('contributor');
+                setActivePage('ringkasan');
               }}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-btn text-surface text-xs font-semibold shadow-subtle transition-colors min-h-[36px] ${
-                activePage === 'pemohon'
-                  ? 'bg-forest-hover ring-2 ring-forest/40'
-                  : 'bg-forest hover:bg-forest-hover'
-              }`}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle transition-colors min-h-[36px]"
               title="Buka Dashboard Pemohon (Pengajuan Saya & Bukti Transaksi)"
             >
               <User className="w-3.5 h-3.5" />

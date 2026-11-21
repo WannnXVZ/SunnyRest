@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Sparkles, Loader2, CheckCircle2, ImageOff } from 'lucide-react';
+import { Sparkles, Loader2, CheckCircle2, ImageOff, ExternalLink } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
+import { NETWORKS } from '../config/networks';
+import { truncateIdentifier } from '../lib/hash';
+import { isArchiveOwnedBy } from '../lib/ownership';
 import { BackendHealth, checkBackendHealth, resolveMediaUrl } from '../lib/api';
 import { PhotoCategory } from '../types';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
@@ -17,9 +20,18 @@ export const RestorationPage: React.FC = () => {
     restorationStage,
     updateArchiveStatus,
     restorationFeeEth,
+    viewMode,
+    wallet,
   } = useArchiveStore();
 
-  const selectedArchive = archives.find((a) => a.id === selectedArchiveId) || archives[0];
+  const isContributorMode = viewMode === 'contributor';
+  const selectableArchives = isContributorMode
+    ? archives.filter((a) => isArchiveOwnedBy(a, wallet.address))
+    : archives;
+
+  const selectedArchive =
+    selectableArchives.find((a) => a.id === selectedArchiveId) || selectableArchives[0];
+  const activeNet = NETWORKS[wallet.chainId];
   const [srError, setSrError] = useState<string | null>(null);
   const [srNotice, setSrNotice] = useState<string | null>(null);
   const [manualCategory, setManualCategory] = useState<PhotoCategory>(
@@ -161,12 +173,12 @@ export const RestorationPage: React.FC = () => {
               value={selectedArchive.id}
               onChange={(e) => {
                 setSelectedArchiveId(e.target.value);
-                const item = archives.find((a) => a.id === e.target.value);
+                const item = selectableArchives.find((a) => a.id === e.target.value);
                 if (item) setManualCategory(item.finalCategory);
               }}
               className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none min-h-[44px]"
             >
-              {archives.map((a) => (
+              {selectableArchives.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.id} · {a.title}
                 </option>
@@ -241,19 +253,33 @@ export const RestorationPage: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="manual-cat-select" className="text-xs font-mono text-ink-muted">
-              Kategori final (koreksi manual kurator)
-            </label>
-            <select
-              id="manual-cat-select"
-              value={manualCategory}
-              onChange={(e) => void handleCategoryCorrection(e.target.value as PhotoCategory)}
-              className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none min-h-[44px]"
-            >
-              <option value="bangunan">Bangunan</option>
-              <option value="orang">Orang</option>
-              <option value="lanskap">Lanskap</option>
-            </select>
+            {isContributorMode ? (
+              <>
+                <span className="text-xs font-mono text-ink-muted block">
+                  Kategori final (ditetapkan kurator)
+                </span>
+                <div className="w-full px-3.5 py-2.5 rounded-btn bg-paper border border-border text-xs text-ink capitalize min-h-[44px] flex items-center justify-between">
+                  <span className="font-semibold">{selectedArchive.finalCategory}</span>
+                  <span className="text-[11px] font-mono text-ink-muted">Kewenangan kurator</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <label htmlFor="manual-cat-select" className="text-xs font-mono text-ink-muted">
+                  Kategori final (koreksi manual kurator)
+                </label>
+                <select
+                  id="manual-cat-select"
+                  value={manualCategory}
+                  onChange={(e) => void handleCategoryCorrection(e.target.value as PhotoCategory)}
+                  className="w-full px-3.5 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink focus:border-forest outline-none min-h-[44px]"
+                >
+                  <option value="bangunan">Bangunan</option>
+                  <option value="orang">Orang</option>
+                  <option value="lanskap">Lanskap</option>
+                </select>
+              </>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -305,6 +331,36 @@ export const RestorationPage: React.FC = () => {
               </div>
             )}
 
+            {!originalVersion?.onChainTokenId && !derivativeVersion && (
+              <div className="p-3 rounded-btn bg-status-warningBg border border-border text-xs text-status-warning leading-relaxed">
+                Arsip harus diterbitkan on-chain oleh kurator (memiliki Token ID) sebelum dapat diajukan restorasi AI berbayar.
+              </div>
+            )}
+
+            {selectedArchive.paymentTxHash && (
+              <div className="p-3 rounded-btn bg-paper/80 border border-border flex items-center justify-between gap-2 text-xs font-mono">
+                <div className="min-w-0">
+                  <span className="text-[10px] text-ink-muted block font-sans">
+                    Tx Hash Pembayaran Restorasi
+                  </span>
+                  <span className="text-ink truncate block">
+                    {truncateIdentifier(selectedArchive.paymentTxHash, 10, 8)}
+                  </span>
+                </div>
+                {activeNet?.explorerUrl && selectedArchive.paymentTxHash.startsWith('0x') && (
+                  <a
+                    href={`${activeNet.explorerUrl}/tx/${selectedArchive.paymentTxHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-forest hover:underline flex-shrink-0"
+                  >
+                    <span>Explorer</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+            )}
+
             {needsPersistenceRecovery ? (
               <div className="space-y-2.5">
                 <div className="p-3 rounded-btn bg-status-warningBg border border-border text-xs text-status-warning leading-relaxed">
@@ -334,10 +390,15 @@ export const RestorationPage: React.FC = () => {
             ) : (
               <button
                 type="button"
-                disabled={isRunningSR || isBusyAnother || !!derivativeVersion}
+                disabled={
+                  isRunningSR ||
+                  isBusyAnother ||
+                  !!derivativeVersion ||
+                  !originalVersion?.onChainTokenId
+                }
                 onClick={() => void handleRunSR()}
                 className={`w-full py-2.5 px-4 rounded-btn text-xs font-semibold flex items-center justify-center gap-2 min-h-[44px] transition-colors ${
-                  derivativeVersion && !isRunningSR
+                  (derivativeVersion && !isRunningSR) || !originalVersion?.onChainTokenId
                     ? 'bg-paper text-ink-muted border border-border cursor-not-allowed'
                     : 'bg-forest hover:bg-forest-hover text-surface shadow-subtle disabled:opacity-60'
                 }`}

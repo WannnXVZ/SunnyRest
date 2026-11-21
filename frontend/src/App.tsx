@@ -15,6 +15,7 @@ import { VerificationPage } from './pages/VerificationPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { ContributorDashboardPage } from './pages/ContributorDashboardPage';
+import { ContributorOverviewPage } from './pages/ContributorOverviewPage';
 
 export const App: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -75,7 +76,29 @@ export const App: React.FC = () => {
       }
     }
 
-    // 2. SISI WORKSPACE (Akses lengkap modul 01 s/d 07 untuk kurator terotentikasi)
+    // 2. SISI PEMOHON (Dashboard Pemohon dengan layout Sidebar + TopHeader 01-06)
+    if (viewMode === 'contributor') {
+      switch (activePage) {
+        case 'ringkasan':
+          return <ContributorOverviewPage />;
+        case 'pemohon':
+          return <ContributorDashboardPage />;
+        case 'detail':
+          return <ArchiveDetailPage />;
+        case 'unggah':
+          return <UploadPage />;
+        case 'restorasi':
+          return <RestorationPage />;
+        case 'verifikasi':
+          return <VerificationPage />;
+        case 'pengaturan':
+          return <SettingsPage />;
+        default:
+          return <ContributorOverviewPage />;
+      }
+    }
+
+    // 3. SISI WORKSPACE (Akses lengkap modul 01 s/d 07 untuk kurator terotentikasi)
     switch (activePage) {
       case 'ringkasan':
         return <OverviewPage />;
@@ -105,8 +128,8 @@ export const App: React.FC = () => {
     return <WorkspaceLoginPage />;
   }
 
-  // 2. If in authenticated curator workspace mode: Render Private Workspace with Sidebar Layout
-  if (viewMode === 'workspace') {
+  // 2. If in curator workspace or contributor dashboard mode: Render Sidebar + TopHeader Layout
+  if (viewMode === 'workspace' || viewMode === 'contributor') {
     return (
       <div className="min-h-screen flex bg-paper text-ink selection:bg-sage selection:text-forest">
         {/* Workspace Sidebar (01-07) */}

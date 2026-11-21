@@ -9,6 +9,9 @@ import {
   normalizeHexHash,
 } from '../lib/contract';
 import { truncateIdentifier } from '../lib/hash';
+import { isArchiveOwnedBy } from '../lib/ownership';
+import { extractTransactionReceipts } from '../lib/receipts';
+import { TransactionReceiptHistory } from '../components/TransactionReceiptHistory';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
 export const VerificationPage: React.FC = () => {
@@ -22,7 +25,9 @@ export const VerificationPage: React.FC = () => {
     viewMode,
     isWorkspaceAuthenticated,
   } = useArchiveStore();
-  const isPublicMode = viewMode === 'public';
+  const isCuratorWorkspace = viewMode === 'workspace' && isWorkspaceAuthenticated;
+  const isContributorMode = viewMode === 'contributor';
+  const isPublicMode = !isCuratorWorkspace;
 
   const [searchInput, setSearchInput] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -39,27 +44,45 @@ export const VerificationPage: React.FC = () => {
   const [publishError, setPublishError] = useState<string | null>(null);
 
   const trimmedQuery = searchInput.trim().toLowerCase();
+  const selectedById = archives.find((a) => a.id === selectedArchiveId);
+  const ownedFallback = isContributorMode
+    ? archives.find((a) => isArchiveOwnedBy(a, wallet.address))
+    : undefined;
+  const fallbackArchive =
+    isContributorMode && selectedById && !isArchiveOwnedBy(selectedById, wallet.address)
+      ? ownedFallback || selectedById || archives[0]
+      : selectedById || ownedFallback || archives[0];
+
   const matchedArchive =
-    archives.find(
-      (a) =>
-        a.id.toLowerCase() === trimmedQuery ||
-        normalizeHexHash(a.originalHash) === normalizeHexHash(trimmedQuery) ||
-        a.versions.some(
-          (v) =>
-            v.transactionHash?.toLowerCase() === trimmedQuery ||
-            (trimmedQuery.replace(/^#/, '').match(/^\d+$/) &&
-              v.onChainTokenId === Number(trimmedQuery.replace(/^#/, '')))
+    (trimmedQuery
+      ? archives.find(
+          (a) =>
+            a.id.toLowerCase() === trimmedQuery ||
+            normalizeHexHash(a.originalHash) === normalizeHexHash(trimmedQuery) ||
+            a.versions.some(
+              (v) =>
+                v.transactionHash?.toLowerCase() === trimmedQuery ||
+                (trimmedQuery.replace(/^#/, '').match(/^\d+$/) &&
+                  v.onChainTokenId === Number(trimmedQuery.replace(/^#/, '')))
+            )
         )
-    ) ||
-    archives.find((a) => a.id === selectedArchiveId) ||
-    archives[0];
+      : undefined) || fallbackArchive;
 
   const activeArchive = matchedArchive;
   const originalVersion =
     activeArchive?.versions.find((v) => v.versionType === 'original') ||
     activeArchive?.versions[0];
+  const derivativeVersion = activeArchive?.versions.find((v) => v.versionType === 'derivative');
   const isRecorded = Boolean(directTokenRecord || activeArchive?.status === 'tercatat');
   const activeNet = NETWORKS[wallet.chainId];
+
+  const authorizedArchives =
+    isCuratorWorkspace || wallet.isCurator
+      ? archives
+      : wallet.isConnected && wallet.address
+      ? archives.filter((a) => isArchiveOwnedBy(a, wallet.address))
+      : [];
+  const authorizedReceipts = extractTransactionReceipts(authorizedArchives);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,26 +218,37 @@ export const VerificationPage: React.FC = () => {
     ? normalizeHexHash(directTokenRecord.fileHash)
     : originalVersion?.fileHash || 'Belum tersedia';
 
+  const archiveMatchesDirect =
+    !directTokenRecord ||
+    Boolean(activeArchive?.versions.some((v) => v.onChainTokenId === directTokenRecord.tokenId));
+  const displayedPaymentTxHash = archiveMatchesDirect ? activeArchive?.paymentTxHash : undefined;
+  const displayedDerivTxHash = archiveMatchesDirect ? derivativeVersion?.transactionHash : undefined;
+  const displayedDerivTokenId = archiveMatchesDirect ? derivativeVersion?.onChainTokenId : undefined;
+
   const displayedTxHash =
     originalVersion?.transactionHash || txReceipt || 'Belum tersedia';
 
   const userAddrLower = wallet.address ? wallet.address.toLowerCase() : '';
-  const ownerAddrLower = (
-    directTokenRecord?.owner ||
-    originalVersion?.ownerAddress ||
-    activeArchive?.recipientAddress ||
-    ''
-  ).toLowerCase();
+  const ownerMatchesDirect = Boolean(
+    userAddrLower &&
+      directTokenRecord?.owner &&
+      directTokenRecord.owner.toLowerCase() === userAddrLower
+  );
   const isAuthorized =
-    !isPublicMode ||
+    isCuratorWorkspace ||
     wallet.isCurator ||
-    Boolean(userAddrLower && ownerAddrLower && userAddrLower === ownerAddrLower);
+    ownerMatchesDirect ||
+    (!directTokenRecord && isArchiveOwnedBy(activeArchive, wallet.address));
 
   return (
     <div className="space-y-10">
       <div className="space-y-3">
         <p className="text-xs font-mono font-medium tracking-wider text-ink-muted uppercase">
-          {isPublicMode ? 'PORTAL PUBLIK · VERIFIKASI TERBUKA' : 'WORKSPACE · AUDIT ON-CHAIN & NODE'}
+          {isCuratorWorkspace
+            ? 'WORKSPACE · AUDIT ON-CHAIN & NODE'
+            : isContributorMode
+            ? 'PEMOHON · VERIFIKASI BLOCKCHAIN & RECEIPT'
+            : 'PORTAL PUBLIK · VERIFIKASI TERBUKA'}
         </p>
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-ink leading-tight max-w-4xl">
           {isPublicMode
@@ -521,16 +555,88 @@ export const VerificationPage: React.FC = () => {
                     : displayedTxHash}
                 </div>
                 {!isAuthorized && displayedTxHash.startsWith('0x') && (
-                  <p className="text-[10px] font-mono text-ink-muted leading-relaxed pt-0.5">
-                    🔒 Bukti transaksi on-chain dirahasiakan untuk privasi pengunggah. Hubungkan wallet pemilik token atau masuk sebagai kurator untuk melihat receipt lengkap.
+                  <p className="flex items-start gap-1.5 text-[10px] font-mono text-ink-muted leading-relaxed pt-1">
+                    <Lock className="w-3 h-3 flex-shrink-0 mt-0.5 text-ink-muted" />
+                    <span>
+                      Bukti transaksi on-chain dirahasiakan untuk privasi pengunggah. Hubungkan wallet pemilik token atau masuk sebagai kurator untuk melihat receipt lengkap.
+                    </span>
                   </p>
                 )}
                 {isAuthorized && displayedTxHash.startsWith('0x') && isPublicMode && (
-                  <p className="text-[10px] font-mono text-forest leading-relaxed pt-0.5">
-                    🔓 Akses Terverifikasi: Anda terhubung sebagai {wallet.isCurator ? 'Kurator Resmi' : 'Pemilik Token Sah'}. Bukti transaksi lengkap dibuka.
+                  <p className="flex items-start gap-1.5 text-[10px] font-mono text-forest leading-relaxed pt-1">
+                    <ShieldCheck className="w-3 h-3 flex-shrink-0 mt-0.5 text-forest" />
+                    <span>
+                      Akses Terverifikasi: Anda terhubung sebagai {wallet.isCurator ? 'Kurator Resmi' : 'Pemilik Token Sah'}. Bukti transaksi lengkap dibuka.
+                    </span>
                   </p>
                 )}
               </div>
+
+              {displayedPaymentTxHash && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-ink-muted font-sans">Tx Hash bayar restorasi</span>
+                    {isAuthorized ? (
+                      activeNet?.explorerUrl &&
+                      displayedPaymentTxHash.startsWith('0x') && (
+                        <a
+                          href={`${activeNet.explorerUrl}/tx/${displayedPaymentTxHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-forest hover:underline"
+                        >
+                          <span>Explorer</span>
+                          <ArrowUpRight className="w-3 h-3" />
+                        </a>
+                      )
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-mono text-status-warning bg-status-warningBg px-2 py-0.5 rounded-btn">
+                        <Lock className="w-2.5 h-2.5" />
+                        <span>Diproteksi</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2.5 rounded-btn bg-paper border border-border text-ink select-all break-all">
+                    {isAuthorized
+                      ? displayedPaymentTxHash
+                      : `${displayedPaymentTxHash.slice(0, 10)}... [Diproteksi · Hanya Pemilik Token / Kurator]`}
+                  </div>
+                </div>
+              )}
+
+              {displayedDerivTxHash && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-ink-muted font-sans">
+                      Tx Hash minting turunan SR x4{displayedDerivTokenId ? ` (#${displayedDerivTokenId})` : ''}
+                    </span>
+                    {isAuthorized ? (
+                      activeNet?.explorerUrl &&
+                      displayedDerivTxHash.startsWith('0x') && (
+                        <a
+                          href={`${activeNet.explorerUrl}/tx/${displayedDerivTxHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-forest hover:underline"
+                        >
+                          <span>Explorer</span>
+                          <ArrowUpRight className="w-3 h-3" />
+                        </a>
+                      )
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-mono text-status-warning bg-status-warningBg px-2 py-0.5 rounded-btn">
+                        <Lock className="w-2.5 h-2.5" />
+                        <span>Diproteksi</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2.5 rounded-btn bg-paper border border-border text-ink select-all break-all">
+                    {isAuthorized
+                      ? displayedDerivTxHash
+                      : `${displayedDerivTxHash.slice(0, 10)}... [Diproteksi · Hanya Pemilik Token / Kurator]`}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -539,6 +645,56 @@ export const VerificationPage: React.FC = () => {
           CID mengidentifikasi konten IPFS; SHA-256 adalah hash berkas yang dicatat permanen pada struct Versi di smart contract.
         </p>
       </section>
+
+      {/* Riwayat Bukti Transaksi */}
+      {wallet.isConnected || isCuratorWorkspace ? (
+        <TransactionReceiptHistory
+          receipts={authorizedReceipts}
+          chainId={wallet.chainId}
+          defaultLimit={5}
+          title={
+            isCuratorWorkspace || wallet.isCurator
+              ? 'Riwayat bukti transaksi on-chain'
+              : 'Riwayat bukti transaksi milik Anda'
+          }
+          subtitle={
+            isCuratorWorkspace || wallet.isCurator
+              ? 'Menampilkan riwayat minting asli, pembayaran restorasi AI, dan minting turunan dari seluruh arsip terverifikasi.'
+              : 'Hanya menampilkan riwayat transaksi untuk foto yang Anda ajukan atau miliki secara on-chain.'
+          }
+          onSelectArchive={(id) => {
+            setSelectedArchiveId(id);
+            setDirectTokenRecord(null);
+            setSearchInput(id);
+          }}
+        />
+      ) : (
+        <section className="space-y-3">
+          <h2 className="text-xl font-display font-bold text-ink">Riwayat bukti transaksi</h2>
+          <div className="bg-surface border border-border rounded-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-subtle">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-paper border border-border flex items-center justify-center flex-shrink-0">
+                <Lock className="w-4 h-4 text-ink-muted" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-ink">
+                  Riwayat transaksi diproteksi untuk privasi pemilik
+                </p>
+                <p className="text-xs text-ink-muted leading-relaxed">
+                  Riwayat transaksi lengkap (Tx Hash minting asli, pembayaran restorasi AI, dan minting turunan) hanya dibuka untuk wallet pemilik token atau kurator resmi.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void connectWallet()}
+              className="px-4 py-2 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle whitespace-nowrap self-start sm:self-center"
+            >
+              Hubungkan MetaMask
+            </button>
+          </div>
+        </section>
+      )}
 
       <FooterDisclaimer />
     </div>

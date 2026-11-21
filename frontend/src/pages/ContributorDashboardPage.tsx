@@ -7,7 +7,6 @@ import {
   ExternalLink,
   Copy,
   Check,
-  CheckCircle2,
   AlertTriangle,
   RotateCw,
   Eye,
@@ -15,11 +14,17 @@ import {
   Globe,
   Wallet,
   Plus,
+  Search,
+  ImageOff,
 } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { NETWORKS } from '../config/networks';
 import { truncateIdentifier } from '../lib/hash';
 import { resolveMediaUrl } from '../lib/api';
+import { isArchiveOwnedBy, isArchivePrivate } from '../lib/ownership';
+import { extractTransactionReceipts } from '../lib/receipts';
+import { StatusBadge } from '../components/StatusBadge';
+import { TransactionReceiptHistory } from '../components/TransactionReceiptHistory';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 import { ArchiveItem } from '../types';
 
@@ -32,16 +37,16 @@ export const ContributorDashboardPage: React.FC = () => {
     setSelectedArchiveId,
     syncArchives,
     isSyncingArchives,
-    requestPaidRestoration,
     restorationFeeEth,
     refreshRestorationFee,
+    updateArchiveVisibility,
   } = useArchiveStore();
 
   const [activeTab, setActiveTab] = useState<'semua' | 'menunggu' | 'tercatat' | 'privat'>('semua');
+  const [searchQuery, setSearchQuery] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
-  const [actionErrorMsg, setActionErrorMsg] = useState<string | null>(null);
-  const [restoringItemId, setRestoringItemId] = useState<string | null>(null);
+  const [updatingVisId, setUpdatingVisId] = useState<string | null>(null);
+  const [visErrorMsg, setVisErrorMsg] = useState<string | null>(null);
 
   const activeNet = NETWORKS[wallet.chainId];
 
@@ -55,70 +60,65 @@ export const ContributorDashboardPage: React.FC = () => {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  // Filter archives belonging to this wallet (either uploader/recipient or creator address match)
-  const userAddressLower = wallet.address ? wallet.address.toLowerCase() : '';
-  const myArchives = archives.filter((item) => {
-    if (!userAddressLower) return false;
-    const recipient = (item.recipientAddress || '').toLowerCase();
-    const origOwner = (item.versions[0]?.ownerAddress || '').toLowerCase();
-    return recipient === userAddressLower || origOwner === userAddressLower;
-  });
+  const myArchives = archives.filter((item) => isArchiveOwnedBy(item, wallet.address));
+  const myReceipts = extractTransactionReceipts(myArchives);
 
   const waitingCount = myArchives.filter(
     (a) => a.status === 'menunggu_tinjauan' || a.status === 'perlu_koreksi'
   ).length;
   const recordedCount = myArchives.filter((a) => a.status === 'tercatat').length;
-  const privateCount = myArchives.filter(
-    (a) => a.visibility === 'private' || a.isPrivate
-  ).length;
+  const privateCount = myArchives.filter((a) => isArchivePrivate(a)).length;
 
   const displayedArchives = myArchives.filter((item) => {
-    if (activeTab === 'menunggu') {
-      return item.status === 'menunggu_tinjauan' || item.status === 'perlu_koreksi';
+    if (activeTab === 'menunggu' && item.status !== 'menunggu_tinjauan' && item.status !== 'perlu_koreksi') {
+      return false;
     }
-    if (activeTab === 'tercatat') {
-      return item.status === 'tercatat';
+    if (activeTab === 'tercatat' && item.status !== 'tercatat') {
+      return false;
     }
-    if (activeTab === 'privat') {
-      return item.visibility === 'private' || item.isPrivate;
+    if (activeTab === 'privat' && !isArchivePrivate(item)) {
+      return false;
     }
-    return true;
+
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      item.title.toLowerCase().includes(q) ||
+      item.id.toLowerCase().includes(q) ||
+      item.finalCategory.toLowerCase().includes(q) ||
+      item.source.toLowerCase().includes(q)
+    );
   });
 
-  const handleRestoreClick = async (item: ArchiveItem) => {
-    setActionErrorMsg(null);
-    setActionSuccessMsg(null);
-    setRestoringItemId(item.id);
-
-    try {
-      const res = await requestPaidRestoration(item.id);
-      if (res.success) {
-        setActionSuccessMsg(
-          `Pembayaran 0.01 ETH berhasil & model Real-ESRGAN x4 selesai! Versi restorasi turunan telah ditambahkan ke arsip ${item.id}.`
-        );
-      } else {
-        setActionErrorMsg(res.error || 'Gagal memproses restorasi.');
-      }
-    } catch (err) {
-      setActionErrorMsg(err instanceof Error ? err.message : 'Terjadi kesalahan sistem.');
-    } finally {
-      setRestoringItemId(null);
+  const handleToggleVisibility = async (item: ArchiveItem) => {
+    setVisErrorMsg(null);
+    setUpdatingVisId(item.id);
+    const nextVis = isArchivePrivate(item) ? 'public' : 'private';
+    const res = await updateArchiveVisibility(item.id, nextVis);
+    setUpdatingVisId(null);
+    if (!res.success && res.error) {
+      setVisErrorMsg(res.error);
     }
   };
 
+  const openItemPage = (id: string, page: 'detail' | 'restorasi') => {
+    setSelectedArchiveId(id);
+    setActivePage(page);
+  };
+
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      {/* Top Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-1 border-b border-border/60 pb-5">
-        <div className="space-y-1">
+    <div className="space-y-8">
+      {/* Header Editorial */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border/60 pb-5">
+        <div className="space-y-2">
           <p className="text-[11px] font-mono font-medium tracking-wider text-ink-muted uppercase">
-            PORTAL KONTRIBUTOR / PEMOHON
+            PEMOHON / ARSIP &amp; BUKTI TRANSAKSI
           </p>
           <h1 className="text-2xl sm:text-3xl font-display font-bold text-ink tracking-tight">
-            Dashboard Pemohon
+            Koleksi Pengajuan &amp; Receipt Resmi.
           </h1>
-          <p className="text-xs text-ink-muted font-sans max-w-2xl leading-relaxed">
-            Pantau status verifikasi pengajuan foto Anda, kelola arsip pribadi, dan simpan bukti transaksi blockchain resmi secara aman.
+          <p className="text-xs sm:text-sm text-ink-muted font-sans max-w-2xl leading-relaxed">
+            Atur visibilitas arsip kenangan pribadi, pantau hasil kurasi, dan simpan bukti transaksi blockchain khusus akun Anda.
           </p>
         </div>
 
@@ -128,7 +128,7 @@ export const ContributorDashboardPage: React.FC = () => {
             onClick={() => void syncArchives()}
             disabled={isSyncingArchives}
             className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-btn bg-surface hover:bg-paper border border-border text-ink text-xs font-mono shadow-subtle min-h-[38px] transition-colors"
-            title="Sinkronkan data arsip"
+            title="Sinkronkan arsip dari backend dan smart contract"
           >
             <RotateCw className={`w-3.5 h-3.5 text-forest ${isSyncingArchives ? 'animate-spin' : ''}`} />
             <span>{isSyncingArchives ? 'Sinkronisasi...' : 'Sinkronkan'}</span>
@@ -145,122 +145,51 @@ export const ContributorDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {actionSuccessMsg && (
-        <div className="p-4 rounded-btn bg-sage border border-sage-border text-xs text-forest flex items-start gap-2 shadow-subtle">
-          <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <p className="leading-relaxed font-sans">{actionSuccessMsg}</p>
-        </div>
-      )}
-
-      {actionErrorMsg && (
+      {visErrorMsg && (
         <div className="p-4 rounded-btn bg-status-dangerBg border border-border text-xs text-status-danger flex items-start gap-2 shadow-subtle">
           <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <p className="leading-relaxed font-sans">{actionErrorMsg}</p>
+          <p className="leading-relaxed font-sans">{visErrorMsg}</p>
         </div>
       )}
 
-      {/* Wallet Status & Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Wallet Profile Card */}
-        <div className="bg-surface border border-border rounded-card p-5 space-y-2 shadow-subtle">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono text-ink-muted">Akun Pemohon</span>
-            <span className="w-2 h-2 rounded-full bg-forest animate-pulse" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-mono font-bold text-ink break-all select-all">
-              {wallet.address ? truncateIdentifier(wallet.address, 6, 6) : 'Belum terhubung'}
-            </p>
-            <p className="text-[11px] font-mono text-ink-muted">
-              {wallet.chainName} ({wallet.chainId})
-            </p>
-          </div>
-          {wallet.address && (
-            <button
-              type="button"
-              onClick={() => handleCopy(wallet.address || '', 'wallet')}
-              className="inline-flex items-center gap-1 text-[11px] font-mono text-forest hover:underline"
-            >
-              {copiedKey === 'wallet' ? <Check className="w-3 h-3 text-forest" /> : <Copy className="w-3 h-3" />}
-              <span>{copiedKey === 'wallet' ? 'Disalin' : 'Salin alamat'}</span>
-            </button>
-          )}
+      {/* Search & Filter Toolbar */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-ink-muted absolute left-3.5 top-3 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari judul, ID arsip, atau kategori..."
+            aria-label="Cari pengajuan saya"
+            className="w-full pl-10 pr-4 py-2.5 rounded-btn bg-surface border border-border text-xs text-ink placeholder:text-ink-muted focus:border-forest outline-none transition-colors min-h-[42px]"
+          />
         </div>
 
-        {/* Stat 1: Total Pengajuan */}
-        <div className="bg-surface border border-border rounded-card p-5 space-y-1 shadow-subtle">
-          <p className="text-[11px] font-mono text-ink-muted">Total Pengajuan Saya</p>
-          <p className="text-3xl font-display font-bold text-ink">{myArchives.length}</p>
-          <p className="text-[11px] font-mono text-ink-muted">Tercatat di server backend</p>
-        </div>
-
-        {/* Stat 2: Menunggu Kurasi */}
-        <div className="bg-surface border border-border rounded-card p-5 space-y-1 shadow-subtle">
-          <p className="text-[11px] font-mono text-ink-muted">Menunggu Kurasi</p>
-          <p className="text-3xl font-display font-bold text-status-warning">{waitingCount}</p>
-          <p className="text-[11px] font-mono text-ink-muted">Dalam antrean kurator</p>
-        </div>
-
-        {/* Stat 3: Tercatat On-Chain */}
-        <div className="bg-surface border border-border rounded-card p-5 space-y-1 shadow-subtle">
-          <p className="text-[11px] font-mono text-ink-muted">Tercatat On-Chain</p>
-          <p className="text-3xl font-display font-bold text-forest">{recordedCount}</p>
-          <p className="text-[11px] font-mono text-ink-muted">Token ERC-721 aktif</p>
-        </div>
-      </div>
-
-      {/* Tabs Filter */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-2">
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab('semua')}
-            className={`px-3 py-1.5 rounded-btn text-xs font-mono transition-colors ${
-              activeTab === 'semua'
-                ? 'bg-forest text-surface font-semibold shadow-subtle'
-                : 'bg-surface hover:bg-paper border border-border text-ink'
-            }`}
-          >
-            Semua ({myArchives.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('menunggu')}
-            className={`px-3 py-1.5 rounded-btn text-xs font-mono transition-colors ${
-              activeTab === 'menunggu'
-                ? 'bg-forest text-surface font-semibold shadow-subtle'
-                : 'bg-surface hover:bg-paper border border-border text-ink'
-            }`}
-          >
-            Menunggu Kurasi ({waitingCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('tercatat')}
-            className={`px-3 py-1.5 rounded-btn text-xs font-mono transition-colors ${
-              activeTab === 'tercatat'
-                ? 'bg-forest text-surface font-semibold shadow-subtle'
-                : 'bg-surface hover:bg-paper border border-border text-ink'
-            }`}
-          >
-            Tercatat On-Chain ({recordedCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('privat')}
-            className={`px-3 py-1.5 rounded-btn text-xs font-mono transition-colors ${
-              activeTab === 'privat'
-                ? 'bg-forest text-surface font-semibold shadow-subtle'
-                : 'bg-surface hover:bg-paper border border-border text-ink'
-            }`}
-          >
-            Kenangan Pribadi ({privateCount})
-          </button>
+          {[
+            { id: 'semua', label: `Semua (${myArchives.length})` },
+            { id: 'menunggu', label: `Menunggu Kurasi (${waitingCount})` },
+            { id: 'tercatat', label: `Tercatat On-Chain (${recordedCount})` },
+            { id: 'privat', label: `Privat (${privateCount})` },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as 'semua' | 'menunggu' | 'tercatat' | 'privat')}
+                className={`px-3 py-1.5 rounded-btn text-xs font-mono transition-colors ${
+                  isActive
+                    ? 'bg-forest text-surface font-semibold shadow-subtle'
+                    : 'bg-surface hover:bg-paper border border-border text-ink'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
-
-        <p className="text-xs font-mono text-ink-muted">
-          Menampilkan {displayedArchives.length} dari {myArchives.length} pengajuan
-        </p>
       </div>
 
       {/* Not Connected State */}
@@ -272,7 +201,7 @@ export const ContributorDashboardPage: React.FC = () => {
           <div className="space-y-1">
             <h2 className="text-xl font-display font-bold text-ink">Hubungkan Wallet Pemohon</h2>
             <p className="text-xs text-ink-muted leading-relaxed">
-              Hubungkan MetaMask untuk melihat daftar foto yang Anda ajukan, mengakses tanda bukti transaksi resmi, dan meminta restorasi foto pribadi.
+              Hubungkan MetaMask untuk memuat daftar pengajuan milik Anda, mengatur status privat/publik, dan mengakses bukti transaksi resmi.
             </p>
           </div>
           <button
@@ -294,7 +223,7 @@ export const ContributorDashboardPage: React.FC = () => {
           <div className="space-y-1 max-w-md mx-auto">
             <h3 className="text-lg font-display font-bold text-ink">Belum Ada Pengajuan Foto</h3>
             <p className="text-xs text-ink-muted leading-relaxed">
-              Anda belum pernah mengajukan arsip foto menggunakan alamat wallet ini. Anda dapat mengunggah foto arsip sejarah maupun foto kenangan keluarga pribadi.
+              Anda belum memiliki pengajuan arsip pada alamat wallet ini. Mulai unggah foto berizin atau foto kenangan pribadi untuk dikurasi.
             </p>
           </div>
           <div className="pt-2">
@@ -310,278 +239,347 @@ export const ContributorDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Submissions List */}
+      {/* Filtered Empty State */}
+      {wallet.isConnected && myArchives.length > 0 && displayedArchives.length === 0 && (
+        <div className="bg-surface border border-border rounded-card p-10 text-center space-y-3 shadow-subtle">
+          <p className="text-xs font-mono text-ink-muted">
+            Tidak ada pengajuan yang cocok dengan filter atau kata kunci pencarian.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('semua');
+              setSearchQuery('');
+            }}
+            className="px-4 py-2 rounded-btn bg-paper hover:bg-surface border border-border text-xs font-semibold text-ink"
+          >
+            Reset Filter
+          </button>
+        </div>
+      )}
+
+      {/* Submissions & Receipt Cards */}
       {wallet.isConnected && displayedArchives.length > 0 && (
         <div className="space-y-6">
           {displayedArchives.map((item) => {
             const v0 = item.versions.find((v) => v.versionType === 'original') || item.versions[0];
             const vDeriv = item.versions.find((v) => v.versionType === 'derivative');
             const isRecorded = item.status === 'tercatat' && Boolean(v0?.onChainTokenId);
-            const isPrivate = item.visibility === 'private' || item.isPrivate;
+            const isPrivate = isArchivePrivate(item);
+            const isOnChainFallback = item.id.startsWith('ONCHAIN-');
             const imgSrc = v0?.imageUrl ? resolveMediaUrl(v0.imageUrl) : '';
 
             return (
               <div
                 key={item.id}
-                className="bg-surface border border-border rounded-card overflow-hidden shadow-subtle hover:border-forest/40 transition-colors"
+                className="bg-surface border border-border rounded-card overflow-hidden shadow-subtle hover:border-forest/50 transition-colors"
               >
-                <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  {/* Left Column: Image Preview */}
-                  <div className="lg:col-span-4 space-y-3">
-                    <div className="h-56 w-full rounded-btn overflow-hidden bg-paper border border-border relative flex items-center justify-center">
+                {/* Card Top Strip */}
+                <div className="px-5 py-3 bg-paper/50 border-b border-border flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-btn bg-surface border border-border text-[11px] font-mono font-bold text-forest">
+                      {item.id}
+                    </span>
+                    <StatusBadge status={item.status} />
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-btn text-[11px] font-mono font-semibold ${
+                        isPrivate
+                          ? 'bg-ink text-surface'
+                          : 'bg-surface border border-border text-ink-muted'
+                      }`}
+                    >
+                      {isPrivate ? <Lock className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
+                      <span>{isPrivate ? 'Privat · Kenangan Pribadi' : 'Publik'}</span>
+                    </span>
+                  </div>
+
+                  {!isOnChainFallback && (
+                    <button
+                      type="button"
+                      disabled={updatingVisId === item.id}
+                      onClick={() => void handleToggleVisibility(item)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-btn bg-surface hover:bg-paper border border-border text-[11px] font-mono text-ink transition-colors"
+                      title={
+                        isPrivate
+                          ? 'Tampilkan foto ini di galeri publik setelah berstatus tercatat'
+                          : 'Sembunyikan foto ini dari galeri publik (kenangan pribadi)'
+                      }
+                    >
+                      {isPrivate ? <Globe className="w-3 h-3 text-forest" /> : <Lock className="w-3 h-3 text-ink-muted" />}
+                      <span>
+                        {updatingVisId === item.id
+                          ? 'Menyimpan...'
+                          : isPrivate
+                          ? 'Jadikan Publik'
+                          : 'Jadikan Privat'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Card Body */}
+                <div className="p-5 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  {/* Left: Thumbnail & Specs */}
+                  <div className="lg:col-span-4 space-y-2.5">
+                    <div className="aspect-[4/3] w-full rounded-btn overflow-hidden bg-paper border border-border flex items-center justify-center">
                       {imgSrc ? (
                         <img
                           src={imgSrc}
                           alt={item.title}
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <span className="text-xs font-mono text-ink-muted">Pratinjau gambar</span>
+                        <div className="flex flex-col items-center gap-1 text-xs font-mono text-ink-muted">
+                          <ImageOff className="w-5 h-5 opacity-50" />
+                          <span>Pratinjau gambar</span>
+                        </div>
                       )}
-
-                      {/* Status Overlay Badge */}
-                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded-btn text-[10px] font-mono font-bold uppercase bg-surface/90 border border-border shadow-subtle">
-                          {item.id}
-                        </span>
-                        {isPrivate ? (
-                          <span className="px-2 py-0.5 rounded-btn text-[10px] font-mono font-bold bg-ink text-surface flex items-center gap-1 shadow-subtle">
-                            <Lock className="w-2.5 h-2.5" />
-                            <span>Privat</span>
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-btn text-[10px] font-mono font-bold bg-forest text-surface flex items-center gap-1 shadow-subtle">
-                            <Globe className="w-2.5 h-2.5" />
-                            <span>Publik</span>
-                          </span>
-                        )}
-                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs font-mono text-ink-muted">
-                      <span>Kategori: {item.finalCategory || item.initialCategory}</span>
-                      <span>{v0?.dimensions || ''}</span>
+                    <div className="flex items-center justify-between text-[11px] font-mono text-ink-muted">
+                      <span className="capitalize">Kategori: {item.finalCategory || item.initialCategory}</span>
+                      <span>{v0?.dimensions || item.updatedAt}</span>
                     </div>
                   </div>
 
-                  {/* Middle & Right Column: Details, Status, & Transaction Receipts */}
-                  <div className="lg:col-span-8 flex flex-col justify-between space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <h2 className="text-xl font-display font-bold text-ink">{item.title}</h2>
-                          <p className="text-xs font-mono text-ink-muted">
-                            Kredit: {item.creator} · Sumber: {item.source} · Lisensi: {item.licenseInfo}
-                          </p>
-                        </div>
+                  {/* Right: Details & Confidential Transaction Receipt */}
+                  <div className="lg:col-span-8 space-y-4">
+                    <div>
+                      <h2 className="text-lg sm:text-xl font-display font-bold text-ink">{item.title}</h2>
+                      <p className="text-xs font-mono text-ink-muted mt-0.5">
+                        Kredit: {item.creator} · Sumber: {item.source} · Lisensi: {item.licenseInfo}
+                      </p>
+                    </div>
 
-                        <span
-                          className={`px-3 py-1 rounded-btn text-xs font-mono font-bold ${
-                            isRecorded
-                              ? 'bg-sage text-forest'
-                              : item.status === 'perlu_koreksi'
-                              ? 'bg-status-warningBg text-status-warning'
-                              : 'bg-paper border border-border text-ink'
-                          }`}
-                        >
-                          {isRecorded
-                            ? `Tercatat di Sepolia · Token #${v0?.onChainTokenId}`
-                            : item.status === 'perlu_koreksi'
-                            ? 'Perlu Koreksi Kurator'
-                            : 'Menunggu Kurasi'}
+                    {/* Confidential Receipt Panel */}
+                    <div className="p-4 rounded-btn bg-paper/60 border border-border space-y-3 font-mono text-xs">
+                      <div className="flex items-center justify-between pb-2 border-b border-border/70">
+                        <span className="font-sans font-semibold text-ink text-xs flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-forest" />
+                          <span>BUKTI TRANSAKSI ON-CHAIN &amp; INTEGRITAS</span>
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-btn bg-sage border border-sage-border text-forest font-bold">
+                          Khusus Pemilik
                         </span>
                       </div>
 
-                      {/* Official Transaction Receipts Box (Private & Exclusive to Pemohon) */}
-                      <div className="p-4 rounded-btn bg-paper/70 border border-border/80 space-y-3 font-mono text-xs">
-                        <div className="flex items-center justify-between pb-1.5 border-b border-border/60">
-                          <span className="font-sans font-semibold text-ink text-xs flex items-center gap-1.5">
-                            <ShieldCheck className="w-3.5 h-3.5 text-forest" />
-                            <span>Bukti Transaksi Resmi (Hanya Pemilik)</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                        <div className="space-y-0.5">
+                          <span className="text-ink-muted font-sans text-[10px]">Token ID On-Chain</span>
+                          <p className="text-ink font-semibold">
+                            {v0?.onChainTokenId
+                              ? `#${v0.onChainTokenId} · ${wallet.chainName}`
+                              : 'Menunggu penerbitan kurator'}
+                          </p>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <span className="text-ink-muted font-sans text-[10px]">SHA-256 Berkas</span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-ink truncate">
+                              {truncateIdentifier(v0?.fileHash || item.originalHash, 8, 6)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(v0?.fileHash || item.originalHash, `hash-${item.id}`)}
+                              className="text-ink-muted hover:text-forest p-0.5 flex-shrink-0"
+                              title="Salin hash SHA-256"
+                            >
+                              {copiedKey === `hash-${item.id}` ? (
+                                <Check className="w-3 h-3 text-forest" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <span className="text-ink-muted font-sans text-[10px]">Tx Hash Minting (ERC-721)</span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-ink truncate">
+                              {v0?.transactionHash
+                                ? truncateIdentifier(v0.transactionHash, 8, 6)
+                                : 'Menunggu tanda tangan kurator'}
+                            </span>
+                            {v0?.transactionHash && (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopy(v0.transactionHash || '', `mint-${item.id}`)}
+                                  className="text-ink-muted hover:text-forest p-0.5"
+                                  title="Salin Tx Hash Minting"
+                                >
+                                  {copiedKey === `mint-${item.id}` ? (
+                                    <Check className="w-3 h-3 text-forest" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                                {activeNet?.explorerUrl && v0.transactionHash.startsWith('0x') && (
+                                  <a
+                                    href={`${activeNet.explorerUrl}/tx/${v0.transactionHash}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-forest hover:underline"
+                                    title="Lihat di Explorer"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-0.5">
+                          <span className="text-ink-muted font-sans text-[10px]">
+                            Tx Hash Bayar Restorasi ({restorationFeeEth || '0.01'} ETH)
                           </span>
-                          <span className="text-[10px] text-forest font-bold">Terotentikasi Wallet</span>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
-                          {/* Token ID */}
-                          <div className="space-y-0.5">
-                            <span className="text-ink-muted font-sans text-[10px]">Token ID On-Chain:</span>
-                            <p className="text-ink font-bold">
-                              {v0?.onChainTokenId ? `#${v0.onChainTokenId}` : 'Belum diterbitkan'}
-                            </p>
-                          </div>
-
-                          {/* SHA-256 File */}
-                          <div className="space-y-0.5">
-                            <span className="text-ink-muted font-sans text-[10px]">SHA-256 Berkas:</span>
-                            <div className="flex items-center justify-between">
-                              <span className="text-ink truncate max-w-[150px]">
-                                {truncateIdentifier(v0?.fileHash || item.originalHash, 8, 6)}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopy(v0?.fileHash || item.originalHash, `hash-${item.id}`)}
-                                className="text-ink-muted hover:text-forest p-0.5"
-                                title="Salin hash SHA-256"
-                              >
-                                {copiedKey === `hash-${item.id}` ? (
-                                  <Check className="w-3 h-3 text-forest" />
-                                ) : (
-                                  <Copy className="w-3 h-3" />
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-ink truncate">
+                              {item.paymentTxHash
+                                ? truncateIdentifier(item.paymentTxHash, 8, 6)
+                                : 'Belum diajukan'}
+                            </span>
+                            {item.paymentTxHash && (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopy(item.paymentTxHash || '', `pay-${item.id}`)}
+                                  className="text-ink-muted hover:text-forest p-0.5"
+                                  title="Salin Tx Hash Restorasi"
+                                >
+                                  {copiedKey === `pay-${item.id}` ? (
+                                    <Check className="w-3 h-3 text-forest" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                                {activeNet?.explorerUrl && item.paymentTxHash.startsWith('0x') && (
+                                  <a
+                                    href={`${activeNet.explorerUrl}/tx/${item.paymentTxHash}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-forest hover:underline"
+                                    title="Lihat di Explorer"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
                                 )}
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Minting Tx Hash */}
-                          <div className="space-y-0.5">
-                            <span className="text-ink-muted font-sans text-[10px]">Tx Hash Minting ERC-721:</span>
-                            <div className="flex items-center justify-between">
-                              <span className="text-ink truncate max-w-[150px]">
-                                {v0?.transactionHash
-                                  ? truncateIdentifier(v0.transactionHash, 8, 6)
-                                  : 'Menunggu tanda tangan kurator'}
-                              </span>
-                              {v0?.transactionHash && (
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCopy(v0.transactionHash || '', `mint-${item.id}`)}
-                                    className="text-ink-muted hover:text-forest p-0.5"
-                                    title="Salin Tx Hash Minting"
-                                  >
-                                    {copiedKey === `mint-${item.id}` ? (
-                                      <Check className="w-3 h-3 text-forest" />
-                                    ) : (
-                                      <Copy className="w-3 h-3" />
-                                    )}
-                                  </button>
-                                  {activeNet?.explorerUrl && v0.transactionHash.startsWith('0x') && (
-                                    <a
-                                      href={`${activeNet.explorerUrl}/tx/${v0.transactionHash}`}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-forest hover:underline"
-                                      title="Buka di Sepolia Etherscan"
-                                    >
-                                      <ExternalLink className="w-3 h-3" />
-                                    </a>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Restoration Payment Tx Hash */}
-                          <div className="space-y-0.5">
-                            <span className="text-ink-muted font-sans text-[10px]">Tx Hash Bayar Restorasi (0.01 ETH):</span>
-                            <div className="flex items-center justify-between">
-                              <span className="text-ink truncate max-w-[150px]">
-                                {item.paymentTxHash
-                                  ? truncateIdentifier(item.paymentTxHash, 8, 6)
-                                  : 'Belum ada pembayaran restorasi'}
-                              </span>
-                              {item.paymentTxHash && (
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCopy(item.paymentTxHash || '', `pay-${item.id}`)}
-                                    className="text-ink-muted hover:text-forest p-0.5"
-                                    title="Salin Tx Hash Restorasi"
-                                  >
-                                    {copiedKey === `pay-${item.id}` ? (
-                                      <Check className="w-3 h-3 text-forest" />
-                                    ) : (
-                                      <Copy className="w-3 h-3" />
-                                    )}
-                                  </button>
-                                  {activeNet?.explorerUrl && item.paymentTxHash.startsWith('0x') && (
-                                    <a
-                                      href={`${activeNet.explorerUrl}/tx/${item.paymentTxHash}`}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-forest hover:underline"
-                                      title="Buka di Sepolia Etherscan"
-                                    >
-                                      <ExternalLink className="w-3 h-3" />
-                                    </a>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* IPFS CID Reference */}
-                        {v0?.ipfsCid && (
-                          <div className="pt-1.5 border-t border-border/60 flex items-center justify-between text-[11px]">
-                            <span className="text-ink-muted font-sans text-[10px]">IPFS Media CID:</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-ink truncate max-w-[200px]">
-                                {truncateIdentifier(v0.ipfsCid, 12, 8)}
+                        {vDeriv?.transactionHash && (
+                          <div className="space-y-0.5 sm:col-span-2">
+                            <span className="text-ink-muted font-sans text-[10px]">
+                              Tx Hash Minting Turunan (SR x4{vDeriv.onChainTokenId ? ` · Token #${vDeriv.onChainTokenId}` : ''})
+                            </span>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-ink truncate">
+                                {truncateIdentifier(vDeriv.transactionHash, 10, 8)}
                               </span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopy(v0.ipfsCid, `cid-${item.id}`)}
-                                className="text-ink-muted hover:text-forest p-0.5"
-                                title="Salin IPFS CID"
-                              >
-                                {copiedKey === `cid-${item.id}` ? (
-                                  <Check className="w-3 h-3 text-forest" />
-                                ) : (
-                                  <Copy className="w-3 h-3" />
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopy(vDeriv.transactionHash || '', `deriv-${item.id}`)}
+                                  className="text-ink-muted hover:text-forest p-0.5"
+                                  title="Salin Tx Hash Minting Turunan"
+                                >
+                                  {copiedKey === `deriv-${item.id}` ? (
+                                    <Check className="w-3 h-3 text-forest" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                                {activeNet?.explorerUrl && vDeriv.transactionHash.startsWith('0x') && (
+                                  <a
+                                    href={`${activeNet.explorerUrl}/tx/${vDeriv.transactionHash}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-forest hover:underline"
+                                    title="Lihat di Explorer"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
                                 )}
-                              </button>
+                              </div>
                             </div>
                           </div>
                         )}
                       </div>
 
-                      {/* Curator Notes if any */}
-                      {item.curatorNotes && (
-                        <div className="p-3 rounded-btn bg-paper border border-border text-xs text-ink-muted leading-relaxed">
-                          <span className="font-semibold text-ink">Catatan Kurator:</span> {item.curatorNotes}
+                      {v0?.ipfsCid && (
+                        <div className="pt-2 border-t border-border/70 flex items-center justify-between gap-2 text-[11px]">
+                          <span className="text-ink-muted font-sans text-[10px]">IPFS Media CID</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-ink truncate">
+                              {truncateIdentifier(v0.ipfsCid, 12, 8)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(v0.ipfsCid, `cid-${item.id}`)}
+                              className="text-ink-muted hover:text-forest p-0.5 flex-shrink-0"
+                              title="Salin IPFS CID"
+                            >
+                              {copiedKey === `cid-${item.id}` ? (
+                                <Check className="w-3 h-3 text-forest" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
 
+                    {item.curatorNotes && (
+                      <div className="p-3 rounded-btn bg-paper border border-border text-xs text-ink-muted leading-relaxed">
+                        <span className="font-semibold text-ink">Catatan Kurator:</span> {item.curatorNotes}
+                      </div>
+                    )}
+
                     {/* Action Toolbar */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/60">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {isRecorded && !vDeriv && (
                           <button
                             type="button"
-                            disabled={restoringItemId === item.id}
-                            onClick={() => void handleRestoreClick(item)}
+                            onClick={() => openItemPage(item.id, 'restorasi')}
                             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle min-h-[38px] transition-colors"
                           >
                             <Sparkles className="w-3.5 h-3.5" />
-                            <span>
-                              {restoringItemId === item.id
-                                ? 'Memproses Restorasi...'
-                                : `Ajukan Restorasi AI (${restorationFeeEth || '0.01'} ETH)`}
-                            </span>
+                            <span>Ajukan Restorasi AI ({restorationFeeEth || '0.01'} ETH)</span>
                           </button>
                         )}
 
                         {vDeriv && (
-                          <span className="px-3 py-1.5 rounded-btn bg-sage border border-sage-border text-xs font-semibold text-forest flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-brass" />
-                            <span>Versi Restorasi x4 Selesai</span>
-                          </span>
+                          <>
+                            <span className="px-3 py-1.5 rounded-btn bg-sage border border-sage-border text-xs font-semibold text-forest inline-flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-brass" />
+                              <span>Versi Restorasi x4 Tersedia</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => openItemPage(item.id, 'restorasi')}
+                              className="px-3 py-2 rounded-btn bg-paper hover:bg-surface border border-border text-xs font-semibold text-ink min-h-[38px] transition-colors"
+                            >
+                              Bandingkan di Restorasi AI
+                            </button>
+                          </>
                         )}
                       </div>
 
                       <button
                         type="button"
-                        onClick={() => {
-                          setSelectedArchiveId(item.id);
-                          setActivePage('detail');
-                        }}
+                        onClick={() => openItemPage(item.id, 'detail')}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-btn bg-surface hover:bg-paper border border-border text-ink text-xs font-semibold shadow-subtle min-h-[38px] transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5 text-ink-muted" />
-                        <span>Buka Detail Lengkap</span>
+                        <span>Buka Detail &amp; Riwayat Versi</span>
                       </button>
                     </div>
                   </div>
@@ -590,6 +588,17 @@ export const ContributorDashboardPage: React.FC = () => {
             );
           })}
         </div>
+      )}
+
+      {wallet.isConnected && (
+        <TransactionReceiptHistory
+          receipts={myReceipts}
+          chainId={wallet.chainId}
+          defaultLimit={5}
+          title="Riwayat lengkap bukti transaksi saya"
+          subtitle="Pilih tampilan 5 transaksi terbaru atau tampilkan semua transaksi yang tercatat untuk akun wallet Anda."
+          onSelectArchive={(id) => openItemPage(id, 'detail')}
+        />
       )}
 
       <FooterDisclaimer />

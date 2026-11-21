@@ -20,6 +20,7 @@ import { NETWORKS } from '../config/networks';
 import { computeFileSHA256, truncateIdentifier } from '../lib/hash';
 import { fetchVersiOnChain, normalizeHexHash } from '../lib/contract';
 import { resolveMediaUrl } from '../lib/api';
+import { isArchiveOwnedBy, isArchivePrivate } from '../lib/ownership';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
 interface IntegrityCheckState {
@@ -41,6 +42,8 @@ export const ArchiveDetailPage: React.FC = () => {
     restorationFeeError,
     refreshRestorationFee,
     wallet,
+    viewMode,
+    isWorkspaceAuthenticated,
   } = useArchiveStore();
 
   const archive = archives.find((a) => a.id === selectedArchiveId) || archives[0];
@@ -69,10 +72,10 @@ export const ArchiveDetailPage: React.FC = () => {
         <p className="text-sm font-mono text-ink-muted">Arsip tidak ditemukan atau daftar arsip masih kosong.</p>
         <button
           type="button"
-          onClick={() => setActivePage('arsip')}
+          onClick={() => setActivePage(viewMode === 'contributor' ? 'pemohon' : 'arsip')}
           className="px-4 py-2 rounded-btn bg-gold text-ink text-xs font-semibold"
         >
-          Kembali ke galeri
+          {viewMode === 'contributor' ? 'Kembali ke arsip saya' : 'Kembali ke galeri'}
         </button>
       </div>
     );
@@ -86,15 +89,11 @@ export const ArchiveDetailPage: React.FC = () => {
   const origImgSrc = originalVersion?.imageUrl ? resolveMediaUrl(originalVersion.imageUrl) : '';
   const derivImgSrc = derivativeVersion?.imageUrl ? resolveMediaUrl(derivativeVersion.imageUrl) : '';
   const activeNet = NETWORKS[wallet.chainId];
-  const userAddrLower = wallet.address ? wallet.address.toLowerCase() : '';
-  const ownerAddrLower = (
-    originalVersion?.ownerAddress ||
-    archive.recipientAddress ||
-    ''
-  ).toLowerCase();
+  const isPrivate = isArchivePrivate(archive);
   const isAuthorized =
+    (viewMode === 'workspace' && isWorkspaceAuthenticated) ||
     wallet.isCurator ||
-    Boolean(userAddrLower && ownerAddrLower && userAddrLower === ownerAddrLower);
+    isArchiveOwnedBy(archive, wallet.address);
 
   const handleCreateRestoration = () => {
     setRestoreErrorMsg(null);
@@ -204,12 +203,13 @@ export const ArchiveDetailPage: React.FC = () => {
       <div>
         <button
           type="button"
-          onClick={() => setActivePage('arsip')}
+          onClick={() => setActivePage(viewMode === 'contributor' ? 'pemohon' : 'arsip')}
           className="inline-flex items-center gap-2 text-xs font-mono text-ink-muted hover:text-forest transition-colors py-1"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>
-            Galeri arsip / <span className="capitalize">{archive.finalCategory}</span> / {archive.id}
+            {viewMode === 'contributor' ? 'Arsip & Bukti Saya' : 'Galeri arsip'} /{' '}
+            <span className="capitalize">{archive.finalCategory}</span> / {archive.id}
           </span>
         </button>
       </div>
@@ -217,9 +217,17 @@ export const ArchiveDetailPage: React.FC = () => {
       {/* Header and Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div className="space-y-1.5">
-          <p className="text-[11px] font-mono font-medium tracking-wider text-ink-muted uppercase">
-            ARSIP {archive.id} / {archive.finalCategory.toUpperCase()}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[11px] font-mono font-medium tracking-wider text-ink-muted uppercase">
+              ARSIP {archive.id} / {archive.finalCategory.toUpperCase()}
+            </p>
+            {isPrivate && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-btn bg-ink text-surface text-[10px] font-mono font-semibold">
+                <Lock className="w-2.5 h-2.5" />
+                <span>Privat · Kenangan Pribadi</span>
+              </span>
+            )}
+          </div>
           <h1 className="text-3xl sm:text-4xl font-display font-bold text-ink tracking-tight">
             {archive.title}
           </h1>
@@ -544,10 +552,76 @@ export const ArchiveDetailPage: React.FC = () => {
                       : `${originalVersion.transactionHash.slice(0, 10)}... [Hanya Pemilik / Kurator]`}
                   </p>
                   {!isAuthorized && (
-                    <p className="text-[10px] text-ink-muted font-mono pt-0.5">
-                      🔒 Bukti transaksi dirahasiakan untuk pengunjung umum.
+                    <p className="flex items-center gap-1 text-[10px] text-ink-muted font-mono pt-0.5">
+                      <Lock className="w-2.5 h-2.5 flex-shrink-0" />
+                      <span>Bukti transaksi dirahasiakan untuk pengunjung umum.</span>
                     </p>
                   )}
+                </div>
+              )}
+
+              {archive.paymentTxHash && (
+                <div className="p-3.5 rounded-btn bg-paper/80 border border-border space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] text-ink-muted">Transaction Hash Pembayaran Restorasi</p>
+                    {isAuthorized ? (
+                      activeNet?.explorerUrl &&
+                      archive.paymentTxHash.startsWith('0x') && (
+                        <a
+                          href={`${activeNet.explorerUrl}/tx/${archive.paymentTxHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono text-forest hover:underline"
+                        >
+                          <span>Explorer</span>
+                          <ArrowUpRight className="w-2.5 h-2.5" />
+                        </a>
+                      )
+                    ) : (
+                      <span className="text-[10px] text-status-warning bg-status-warningBg px-2 py-0.5 rounded-btn font-mono">
+                        Diproteksi
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-ink text-[11px] break-all select-all font-mono leading-relaxed">
+                    {isAuthorized
+                      ? archive.paymentTxHash
+                      : `${archive.paymentTxHash.slice(0, 10)}... [Hanya Pemilik / Kurator]`}
+                  </p>
+                </div>
+              )}
+
+              {derivativeVersion?.transactionHash && (
+                <div className="p-3.5 rounded-btn bg-paper/80 border border-border space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] text-ink-muted">
+                      Transaction Hash Minting Turunan (SR x4
+                      {derivativeVersion.onChainTokenId ? ` · Token #${derivativeVersion.onChainTokenId}` : ''})
+                    </p>
+                    {isAuthorized ? (
+                      activeNet?.explorerUrl &&
+                      derivativeVersion.transactionHash.startsWith('0x') && (
+                        <a
+                          href={`${activeNet.explorerUrl}/tx/${derivativeVersion.transactionHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono text-forest hover:underline"
+                        >
+                          <span>Explorer</span>
+                          <ArrowUpRight className="w-2.5 h-2.5" />
+                        </a>
+                      )
+                    ) : (
+                      <span className="text-[10px] text-status-warning bg-status-warningBg px-2 py-0.5 rounded-btn font-mono">
+                        Diproteksi
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-ink text-[11px] break-all select-all font-mono leading-relaxed">
+                    {isAuthorized
+                      ? derivativeVersion.transactionHash
+                      : `${derivativeVersion.transactionHash.slice(0, 10)}... [Hanya Pemilik / Kurator]`}
+                  </p>
                 </div>
               )}
             </div>

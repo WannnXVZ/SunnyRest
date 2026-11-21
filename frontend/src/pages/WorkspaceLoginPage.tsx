@@ -4,7 +4,7 @@ import { useArchiveStore } from '../store/useArchiveStore';
 import { truncateIdentifier } from '../lib/hash';
 
 export const WorkspaceLoginPage: React.FC = () => {
-  const { wallet, connectWallet, loginToWorkspace, setViewMode } = useArchiveStore();
+  const { wallet, connectWallet, loginToWorkspace, setViewMode, setActivePage } = useArchiveStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -33,7 +33,10 @@ export const WorkspaceLoginPage: React.FC = () => {
       <div className="max-w-4xl w-full mx-auto flex items-center justify-between">
         <button
           type="button"
-          onClick={() => setViewMode('public')}
+          onClick={() => {
+            setViewMode('public');
+            setActivePage('arsip');
+          }}
           className="inline-flex items-center gap-2 text-xs font-mono text-ink-muted hover:text-forest transition-colors py-2"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -153,6 +156,19 @@ export const WorkspaceLoginPage: React.FC = () => {
                   <span>Masuk Sebagai Kurator Terverifikasi</span>
                 </>
               )}
+            </button>
+          )}
+
+          {wallet.isConnected && !wallet.isCurator && (
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('contributor');
+                setActivePage('ringkasan');
+              }}
+              className="w-full py-2.5 px-4 rounded-btn bg-paper hover:bg-surface border border-border text-ink text-xs font-semibold transition-colors min-h-[40px]"
+            >
+              Masuk ke Dashboard Pemohon
             </button>
           )}
         </div>

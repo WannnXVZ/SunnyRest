@@ -75,7 +75,7 @@ export type NavigationPage =
   | 'pengaturan'
   | 'pemohon';
 
-export type ViewMode = 'public' | 'login' | 'workspace';
+export type ViewMode = 'public' | 'login' | 'workspace' | 'contributor';
 export type PublicTab = 'semua' | 'unggah_restorasi' | 'restorasi' | 'verifikasi';
 
 export interface WalletState {

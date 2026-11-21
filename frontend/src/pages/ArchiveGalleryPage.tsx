@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, BookOpen, ArrowUpRight, RotateCw, ImageOff } from 'lucide-react';
+import { Search, Plus, BookOpen, ArrowUpRight, RotateCw, ImageOff, Lock } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { resolveMediaUrl } from '../lib/api';
+import { isArchivePrivate } from '../lib/ownership';
 import { FooterDisclaimer } from '../components/FooterDisclaimer';
 
 export const ArchiveGalleryPage: React.FC = () => {
@@ -14,6 +15,9 @@ export const ArchiveGalleryPage: React.FC = () => {
     setSelectedArchiveId,
     setActivePage,
     viewMode,
+    setViewMode,
+    wallet,
+    connectWallet,
     isSyncingArchives,
     syncError,
     syncArchives,
@@ -52,7 +56,7 @@ export const ArchiveGalleryPage: React.FC = () => {
 
   const filteredArchives = archives
     .filter((item) => {
-      if (isPublicMode && (item.status !== 'tercatat' || item.visibility === 'private' || item.isPrivate)) {
+      if (isPublicMode && (item.status !== 'tercatat' || isArchivePrivate(item))) {
         return false;
       }
 
@@ -242,13 +246,44 @@ export const ArchiveGalleryPage: React.FC = () => {
           </p>
           <div className="flex flex-wrap justify-center gap-2">
             {archives.length === 0 ? (
-              <button
-                type="button"
-                onClick={() => setActivePage('unggah')}
-                className="px-4 py-2 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle transition-colors"
-              >
-                Unggah Foto Baru
-              </button>
+              isPublicMode ? (
+                wallet.isConnected && !wallet.isCurator ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode('contributor');
+                      setActivePage('ringkasan');
+                    }}
+                    className="px-4 py-2 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle transition-colors"
+                  >
+                    Buka Dashboard Pemohon
+                  </button>
+                ) : wallet.isConnected && wallet.isCurator ? (
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('workspace')}
+                    className="px-4 py-2 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle transition-colors"
+                  >
+                    Masuk ke Workspace Kurator
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void connectWallet()}
+                    className="px-4 py-2 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle transition-colors"
+                  >
+                    Hubungkan Wallet untuk Mengajukan
+                  </button>
+                )
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActivePage('unggah')}
+                  className="px-4 py-2 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle transition-colors"
+                >
+                  Unggah Foto Baru
+                </button>
+              )
             ) : (
               <button
                 type="button"
@@ -297,29 +332,37 @@ export const ArchiveGalleryPage: React.FC = () => {
                   </span>
 
                   {!isPublicMode && (
-                    <span
-                      className={`absolute top-3 right-3 px-2 py-0.5 rounded-btn text-[10px] font-mono font-bold shadow-subtle ${
-                        item.status === 'tercatat'
-                          ? 'bg-sage border border-forest text-forest'
-                          : item.status === 'menunggu_tinjauan'
-                          ? 'bg-gold-light border border-gold-border text-ink'
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                      {isArchivePrivate(item) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-btn text-[10px] font-mono font-bold bg-ink text-surface shadow-subtle">
+                          <Lock className="w-2.5 h-2.5" />
+                          <span>Privat</span>
+                        </span>
+                      )}
+                      <span
+                        className={`px-2 py-0.5 rounded-btn text-[10px] font-mono font-bold shadow-subtle ${
+                          item.status === 'tercatat'
+                            ? 'bg-sage border border-forest text-forest'
+                            : item.status === 'menunggu_tinjauan'
+                            ? 'bg-gold-light border border-gold-border text-ink'
+                            : item.status === 'disetujui'
+                            ? 'bg-sage border border-sage-border text-forest'
+                            : item.status === 'perlu_koreksi'
+                            ? 'bg-status-warningBg border border-status-warning text-status-warning'
+                            : 'bg-status-dangerBg border border-status-danger text-status-danger'
+                        }`}
+                      >
+                        {item.status === 'tercatat'
+                          ? 'Tercatat'
                           : item.status === 'disetujui'
-                          ? 'bg-sage border border-sage-border text-forest'
+                          ? 'Disetujui'
+                          : item.status === 'menunggu_tinjauan'
+                          ? 'Menunggu Kurasi'
                           : item.status === 'perlu_koreksi'
-                          ? 'bg-status-warningBg border border-status-warning text-status-warning'
-                          : 'bg-status-dangerBg border border-status-danger text-status-danger'
-                      }`}
-                    >
-                      {item.status === 'tercatat'
-                        ? 'Tercatat'
-                        : item.status === 'disetujui'
-                        ? 'Disetujui'
-                        : item.status === 'menunggu_tinjauan'
-                        ? 'Menunggu Kurasi'
-                        : item.status === 'perlu_koreksi'
-                        ? 'Perlu Koreksi'
-                        : 'Ditolak'}
-                    </span>
+                          ? 'Perlu Koreksi'
+                          : 'Ditolak'}
+                      </span>
+                    </div>
                   )}
                 </div>
 

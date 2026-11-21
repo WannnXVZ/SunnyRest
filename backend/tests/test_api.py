@@ -323,6 +323,28 @@ def test_persistent_submissions_lifecycle_and_exact_hash(tmp_path):
         assert patched.json()["status"] == "disetujui"
         assert patched.json()["curatorNotes"] == "Layak terbit"
 
+        # Uji persistensi status visibilitas privat / publik melalui PATCH & GET /submissions
+        vis_priv = client.patch(
+            "/submissions/SR-0001",
+            json={"visibility": "private", "isPrivate": True},
+        )
+        assert vis_priv.status_code == 200
+        assert vis_priv.json()["visibility"] == "private"
+        assert vis_priv.json()["isPrivate"] is True
+
+        listed_priv = client.get("/submissions")
+        assert listed_priv.status_code == 200
+        assert listed_priv.json()["items"][0]["visibility"] == "private"
+        assert listed_priv.json()["items"][0]["isPrivate"] is True
+
+        vis_pub = client.patch(
+            "/submissions/SR-0001",
+            json={"visibility": "public", "isPrivate": False},
+        )
+        assert vis_pub.status_code == 200
+        assert vis_pub.json()["visibility"] == "public"
+        assert vis_pub.json()["isPrivate"] is False
+
         # Uji batas MAX_DERIVATIVE_BYTES pada upload-file dan ipfs/pin-file (lolos di atas MAX_UPLOAD_BYTES, ditolak bila melebihi MAX_DERIVATIVE_BYTES)
         with patch.object(settings, "MAX_UPLOAD_BYTES", 50), patch.object(
             settings, "MAX_DERIVATIVE_BYTES", len(sr_bytes) + 100

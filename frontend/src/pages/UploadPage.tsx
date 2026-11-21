@@ -8,6 +8,8 @@ import {
   ArrowRight,
   Loader2,
   Image as ImageIcon,
+  Globe,
+  Lock,
 } from 'lucide-react';
 import { isAddress } from 'ethers';
 import { useArchiveStore } from '../store/useArchiveStore';
@@ -32,8 +34,11 @@ export const UploadPage: React.FC = () => {
     archives,
     wallet,
     viewMode,
+    setViewMode,
   } = useArchiveStore();
-  const isPublicMode = viewMode === 'public';
+  const isCuratorWorkspace = viewMode === 'workspace';
+  const isContributorMode = viewMode === 'contributor';
+  const isPublicMode = !isCuratorWorkspace;
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -290,25 +295,41 @@ export const UploadPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            {!isPublicMode ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedArchiveId(submittedArchiveId);
-                  setActivePage('kurator');
-                }}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
-              >
-                Buka Peninjauan Kurator Sekarang
-              </button>
-            ) : (
+            {isCuratorWorkspace ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedArchiveId(submittedArchiveId);
+                    setActivePage('kurator');
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
+                >
+                  Buka Peninjauan Kurator Sekarang
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-surface hover:bg-paper border border-border text-xs font-semibold text-ink transition-colors min-h-[42px]"
+                >
+                  Unggah Foto Lain
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePage('arsip')}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-paper hover:bg-paper/80 border border-border text-xs font-mono text-ink-muted transition-colors min-h-[42px]"
+                >
+                  Kembali ke Galeri
+                </button>
+              </>
+            ) : isContributorMode ? (
               <>
                 <button
                   type="button"
                   onClick={() => setActivePage('pemohon')}
                   className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
                 >
-                  Buka Dashboard Pemohon
+                  Buka Arsip &amp; Bukti Saya
                 </button>
                 <button
                   type="button"
@@ -320,22 +341,49 @@ export const UploadPage: React.FC = () => {
                 >
                   Lihat Pratinjau Arsip
                 </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-surface hover:bg-paper border border-border text-xs font-semibold text-ink transition-colors min-h-[42px]"
+                >
+                  Unggah Foto Lain
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePage('ringkasan')}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-paper hover:bg-paper/80 border border-border text-xs font-mono text-ink-muted transition-colors min-h-[42px]"
+                >
+                  Kembali ke Ringkasan
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode('contributor');
+                    setActivePage('ringkasan');
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
+                >
+                  Buka Dashboard Pemohon
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-surface hover:bg-paper border border-border text-xs font-semibold text-ink transition-colors min-h-[42px]"
+                >
+                  Unggah Foto Lain
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePage('arsip')}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-paper hover:bg-paper/80 border border-border text-xs font-mono text-ink-muted transition-colors min-h-[42px]"
+                >
+                  Kembali ke Galeri
+                </button>
               </>
             )}
-            <button
-              type="button"
-              onClick={resetForm}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-surface hover:bg-paper border border-border text-xs font-semibold text-ink transition-colors min-h-[42px]"
-            >
-              Unggah Foto Lain
-            </button>
-            <button
-              type="button"
-              onClick={() => setActivePage('arsip')}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-paper hover:bg-paper/80 border border-border text-xs font-mono text-ink-muted transition-colors min-h-[42px]"
-            >
-              Kembali ke Galeri
-            </button>
           </div>
         </div>
         <FooterDisclaimer />
@@ -688,7 +736,10 @@ export const UploadPage: React.FC = () => {
                   className="mt-1 text-forest focus:ring-forest"
                 />
                 <div className="space-y-0.5">
-                  <p className="text-xs font-semibold">🌐 Galeri Publik Terbuka</p>
+                  <p className="text-xs font-semibold flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>Galeri Publik Terbuka</span>
+                  </p>
                   <p className="text-[11px] text-ink-muted leading-relaxed">
                     Setelah disetujui kurator, foto akan ditampilkan di galeri publik untuk dilihat khalayak umum.
                   </p>
@@ -711,7 +762,10 @@ export const UploadPage: React.FC = () => {
                   className="mt-1 text-forest focus:ring-forest"
                 />
                 <div className="space-y-0.5">
-                  <p className="text-xs font-semibold">🔒 Kenangan Pribadi (Privat)</p>
+                  <p className="text-xs font-semibold flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>Kenangan Pribadi (Privat)</span>
+                  </p>
                   <p className="text-[11px] text-ink-muted leading-relaxed">
                     Hanya tersimpan di Dashboard Pemohon Anda; tidak akan dimunculkan di galeri publik umum.
                   </p>

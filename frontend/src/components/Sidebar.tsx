@@ -19,24 +19,43 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) => {
-  const { activePage, setActivePage } = useArchiveStore();
+  const { activePage, setActivePage, viewMode, setViewMode } = useArchiveStore();
+  const isContributorMode = viewMode === 'contributor';
 
   const handleNav = (page: NavigationPage) => {
     setActivePage(page);
     setMobileOpen(false);
   };
 
-  const navItems: { page: NavigationPage; label: string; num: string; icon: React.ReactNode; group: 'WORKSPACE' | 'SISTEM' }[] = [
-    { page: 'ringkasan', label: 'Ringkasan', num: '01', icon: <LayoutDashboard className="w-4 h-4" />, group: 'WORKSPACE' },
-    { page: 'arsip', label: 'Arsip Foto', num: '02', icon: <Images className="w-4 h-4" />, group: 'WORKSPACE' },
-    { page: 'unggah', label: 'Unggah Foto', num: '03', icon: <Upload className="w-4 h-4" />, group: 'WORKSPACE' },
-    { page: 'restorasi', label: 'Restorasi AI', num: '04', icon: <Sparkles className="w-4 h-4" />, group: 'WORKSPACE' },
-    { page: 'kurator', label: 'Peninjauan Kurator', num: '05', icon: <ClipboardCheck className="w-4 h-4" />, group: 'WORKSPACE' },
-    { page: 'verifikasi', label: 'Verifikasi Blockchain', num: '06', icon: <ShieldCheck className="w-4 h-4" />, group: 'SISTEM' },
-    { page: 'pengaturan', label: 'Pengaturan', num: '07', icon: <Settings className="w-4 h-4" />, group: 'SISTEM' },
-  ];
+  type NavItem = {
+    page: NavigationPage;
+    label: string;
+    num: string;
+    icon: React.ReactNode;
+    group: 'PRIMARY' | 'SISTEM';
+  };
 
-  const workspaceItems = navItems.filter((i) => i.group === 'WORKSPACE');
+  const navItems: NavItem[] = isContributorMode
+    ? [
+        { page: 'ringkasan', label: 'Ringkasan', num: '01', icon: <LayoutDashboard className="w-4 h-4" />, group: 'PRIMARY' },
+        { page: 'pemohon', label: 'Arsip & Bukti', num: '02', icon: <Images className="w-4 h-4" />, group: 'PRIMARY' },
+        { page: 'unggah', label: 'Unggah Foto', num: '03', icon: <Upload className="w-4 h-4" />, group: 'PRIMARY' },
+        { page: 'restorasi', label: 'Restorasi AI', num: '04', icon: <Sparkles className="w-4 h-4" />, group: 'PRIMARY' },
+        { page: 'verifikasi', label: 'Verifikasi Blockchain', num: '05', icon: <ShieldCheck className="w-4 h-4" />, group: 'SISTEM' },
+        { page: 'pengaturan', label: 'Pengaturan', num: '06', icon: <Settings className="w-4 h-4" />, group: 'SISTEM' },
+      ]
+    : [
+        { page: 'ringkasan', label: 'Ringkasan', num: '01', icon: <LayoutDashboard className="w-4 h-4" />, group: 'PRIMARY' },
+        { page: 'arsip', label: 'Arsip Foto', num: '02', icon: <Images className="w-4 h-4" />, group: 'PRIMARY' },
+        { page: 'unggah', label: 'Unggah Foto', num: '03', icon: <Upload className="w-4 h-4" />, group: 'PRIMARY' },
+        { page: 'restorasi', label: 'Restorasi AI', num: '04', icon: <Sparkles className="w-4 h-4" />, group: 'PRIMARY' },
+        { page: 'kurator', label: 'Peninjauan Kurator', num: '05', icon: <ClipboardCheck className="w-4 h-4" />, group: 'PRIMARY' },
+        { page: 'verifikasi', label: 'Verifikasi Blockchain', num: '06', icon: <ShieldCheck className="w-4 h-4" />, group: 'SISTEM' },
+        { page: 'pengaturan', label: 'Pengaturan', num: '07', icon: <Settings className="w-4 h-4" />, group: 'SISTEM' },
+      ];
+
+  const primaryGroupLabel = isContributorMode ? 'PEMOHON' : 'WORKSPACE';
+  const primaryItems = navItems.filter((i) => i.group === 'PRIMARY');
   const systemItems = navItems.filter((i) => i.group === 'SISTEM');
 
   return (
@@ -80,14 +99,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
 
           {/* Navigation Links */}
           <nav className="p-4 space-y-6 overflow-y-auto">
-            {/* WORKSPACE GROUP */}
+            {/* WORKSPACE / PEMOHON GROUP */}
             <div>
               <p className="px-3 pb-2 text-[11px] font-mono font-medium tracking-wider text-ink-muted uppercase">
-                WORKSPACE
+                {primaryGroupLabel}
               </p>
               <div className="space-y-1">
-                {workspaceItems.map((item) => {
-                  const isActive = activePage === item.page || (item.page === 'arsip' && activePage === 'detail');
+                {primaryItems.map((item) => {
+                  const isActive =
+                    activePage === item.page ||
+                    (item.page === 'arsip' && activePage === 'detail') ||
+                    (item.page === 'pemohon' && activePage === 'detail');
                   return (
                     <button
                       key={item.page}
@@ -147,9 +169,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
           <button
             type="button"
             onClick={() => {
-              const store = useArchiveStore.getState();
-              store.setViewMode('public');
-              store.setActivePage('arsip');
+              setViewMode('public');
+              setActivePage('arsip');
+              setMobileOpen(false);
             }}
             className="w-full py-2 px-3 rounded-btn bg-surface hover:bg-paper border border-border text-forest text-xs font-semibold flex items-center justify-center gap-2 shadow-subtle min-h-[38px] transition-colors"
           >
@@ -157,15 +179,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
           </button>
           <button
             type="button"
-            onClick={() => useArchiveStore.getState().logoutWorkspace()}
+            onClick={() => {
+              if (isContributorMode) {
+                setViewMode('public');
+                setActivePage('arsip');
+                setMobileOpen(false);
+              } else {
+                useArchiveStore.getState().logoutWorkspace();
+              }
+            }}
             className="w-full py-1.5 px-3 rounded-btn text-ink-muted hover:text-status-danger hover:bg-surface/60 text-xs font-mono flex items-center justify-center gap-1.5 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Kunci & Keluar</span>
+            <span>{isContributorMode ? 'Keluar Dashboard' : 'Kunci & Keluar'}</span>
           </button>
           <div className="text-[11px] text-ink-muted font-mono leading-relaxed pt-1">
-            <p className="font-semibold text-ink">WORKSPACE PRIVAT</p>
-            <p>SunnyRest · Data Kurasi</p>
+            <p className="font-semibold text-ink">
+              {isContributorMode ? 'DASHBOARD PEMOHON' : 'WORKSPACE PRIVAT'}
+            </p>
+            <p>{isContributorMode ? 'SunnyRest · Arsip & Receipt' : 'SunnyRest · Data Kurasi'}</p>
           </div>
         </div>
       </aside>

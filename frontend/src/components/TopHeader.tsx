@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, UserCheck, Eye } from 'lucide-react';
+import { Menu, UserCheck, User, Eye } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { truncateIdentifier } from '../lib/hash';
 
@@ -8,9 +8,10 @@ interface TopHeaderProps {
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
-  const { activePage, wallet, switchNetwork, connectWallet, restorationFeeEth } = useArchiveStore();
+  const { activePage, viewMode, wallet, switchNetwork, connectWallet, restorationFeeEth } = useArchiveStore();
+  const isContributorMode = viewMode === 'contributor';
 
-  const pageBreadcrumbMap: Record<string, string> = {
+  const workspaceBreadcrumbMap: Record<string, string> = {
     ringkasan: 'Workspace / Ringkasan',
     arsip: 'Workspace / Arsip Foto',
     detail: 'Workspace / Detail Arsip dan Riwayat Versi',
@@ -21,18 +22,32 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
     pengaturan: 'Sistem / Pengaturan',
   };
 
-  const currentBreadcrumb = pageBreadcrumbMap[activePage] || 'Workspace / Ringkasan';
+  const contributorBreadcrumbMap: Record<string, string> = {
+    ringkasan: 'Pemohon / Ringkasan',
+    pemohon: 'Pemohon / Arsip & Bukti Transaksi',
+    detail: 'Pemohon / Detail Arsip dan Riwayat Versi',
+    unggah: 'Pemohon / Unggah foto berizin',
+    restorasi: 'Pemohon / Restorasi AI',
+    verifikasi: 'Sistem / Verifikasi blockchain',
+    pengaturan: 'Sistem / Pengaturan',
+  };
+
+  const currentBreadcrumb = isContributorMode
+    ? contributorBreadcrumbMap[activePage] || 'Pemohon / Ringkasan'
+    : workspaceBreadcrumbMap[activePage] || 'Workspace / Ringkasan';
 
   return (
     <div className="sticky top-0 z-30 bg-surface shadow-subtle">
       {/* Top Status Banner */}
       <div className="bg-paper border-b border-border/80 px-4 md:px-8 py-1.5 flex items-center justify-between text-[11px] font-mono text-ink-muted">
         <span>
-          Workspace Kurator · {wallet.chainName} ({wallet.chainId})
+          {isContributorMode ? 'Dashboard Pemohon' : 'Workspace Kurator'} · {wallet.chainName} ({wallet.chainId})
         </span>
         <span className="hidden sm:inline">
           {restorationFeeEth
-            ? `Biaya restorasi kontrak: ${restorationFeeEth} ETH · Status peran diverifikasi on-chain`
+            ? isContributorMode
+              ? `Biaya restorasi kontrak: ${restorationFeeEth} ETH · Bukti transaksi privat hanya untuk pemilik`
+              : `Biaya restorasi kontrak: ${restorationFeeEth} ETH · Status peran diverifikasi on-chain`
             : 'Menunggu sinkronisasi kontrak RPC lokal/Sepolia'}
         </span>
       </div>
@@ -53,12 +68,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
           </span>
         </div>
 
-        {/* Right: Network status badges & Curator account chip */}
+        {/* Right: Network status badges & Account chip */}
         <div className="flex items-center gap-2 md:gap-3">
           {/* Switch to Public Portal Button */}
           <button
             type="button"
-            onClick={() => useArchiveStore.getState().setViewMode('public')}
+            onClick={() => {
+              const store = useArchiveStore.getState();
+              store.setViewMode('public');
+              store.setActivePage('arsip');
+            }}
             className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-btn bg-paper border border-border text-xs font-mono text-forest hover:border-forest transition-colors"
             title="Buka tampilan galeri publik"
           >
@@ -86,7 +105,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
             title="Status akun wallet & peran on-chain"
             className="flex items-center gap-2 px-2.5 py-1.5 rounded-btn bg-paper border border-border text-xs font-mono text-ink hover:border-forest transition-colors"
           >
-            <UserCheck className="w-3.5 h-3.5 text-forest" />
+            {wallet.isCurator ? (
+              <UserCheck className="w-3.5 h-3.5 text-forest" />
+            ) : (
+              <User className="w-3.5 h-3.5 text-forest" />
+            )}
             {wallet.address ? (
               <span className="font-mono text-ink">
                 {truncateIdentifier(wallet.address, 4, 3)}
@@ -96,7 +119,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileMenu }) => {
             )}
             {wallet.isConnected && (
               <span className="hidden sm:inline text-ink-muted">
-                {wallet.isCurator ? 'Kurator' : 'Non-Kurator'}
+                {wallet.isCurator ? 'Kurator' : 'Pemohon'}
               </span>
             )}
           </button>
