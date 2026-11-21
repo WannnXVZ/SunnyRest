@@ -120,6 +120,139 @@ function normalizeSubmissionMediaUrls(item: ArchiveItem): ArchiveItem {
   };
 }
 
+export type RestorationStage = 'idle' | TxStage | 'enhancing';
+
+export interface RestorationActionResult {
+  success: boolean;
+  error?: string;
+  warning?: string;
+  txHash?: string;
+  requestId?: number;
+  feeEth?: string;
+  newVersion?: ArchiveVersion;
+}
+
+async function runEnhanceAndPersist(
+  archive: ArchiveItem,
+  originalVer: ArchiveVersion,
+  requestId: number,
+  paymentTxHash: string,
+  restorationFeePaid: string | undefined,
+  feeEth: string | undefined,
+  replaceExistingDerivative: boolean,
+  onStage: (stage: TxStage | 'enhancing') => void,
+  setState: (partial: Partial<ArchiveStore> | ((state: ArchiveStore) => Partial<ArchiveStore>)) => void
+): Promise<RestorationActionResult> {
+  onStage('enhancing');
+  const srResult = await enhancePhotoWithSR(originalVer.imageUrl, requestId);
+  const srHash = await computeFileSHA256(srResult.blob);
+
+  let storedSrUrl = srResult.imageUrl;
+  let storedDimensions: string | undefined;
+  let uploadWarning: string | undefined;
+
+  if (!archive.id.startsWith('ONCHAIN-')) {
+    try {
+      const uploaded = await uploadDerivativeFileOnServer(
+        archive.id,
+        srResult.blob,
+        `${archive.id}_sr_x${srResult.scale}.png`
+      );
+      storedSrUrl = uploaded.url;
+      storedDimensions = uploaded.dimensions;
+    } catch (err) {
+      uploadWarning =
+        err instanceof Error
+          ? `Hasil SR selesai di sesi browser tetapi gagal disimpan ke disk backend (${err.message}).`
+          : 'Hasil SR selesai di sesi browser tetapi gagal disimpan ke disk backend.';
+    }
+  }
+
+  const nowDate = formatCurrentDate();
+  const nowTs = formatCurrentTimestamp();
+  const existingDerivative = archive.versions.find(
+    (v) => v.versionType === 'derivative'
+  );
+
+  const rawDerivativeVersion: ArchiveVersion = {
+    versionNumber:
+      replaceExistingDerivative && existingDerivative
+        ? existingDerivative.versionNumber
+        : archive.versions.length + 1,
+    versionType: 'derivative',
+    label: `Super-Resolution x${srResult.scale} (Menunggu Terbit On-Chain)`,
+    parentId: String(originalVer.onChainTokenId),
+    ipfsCid: '',
+    fileHash: srHash,
+    requestId,
+    transactionHash: paymentTxHash,
+    onChainVerified: false,
+    fileName: `${archive.id}_sr_x${srResult.scale}.png`,
+    fileSizeBytes: srResult.blob.size,
+    dimensions: storedDimensions,
+    timestamp: nowTs,
+    methodLabel: `${srResult.method} x${srResult.scale} (${srResult.modelVersion}${srResult.isMock ? ' · mock' : ''})`,
+    modelVersion: srResult.modelVersion,
+    imageUrl: storedSrUrl,
+  };
+
+  const hydratedVersion: ArchiveVersion = {
+    ...rawDerivativeVersion,
+    imageUrl: resolveMediaUrl(storedSrUrl),
+  };
+
+  const mergeVersions = (vers: ArchiveVersion[], useHydrated: boolean) => {
+    const nextVer = useHydrated ? hydratedVersion : rawDerivativeVersion;
+    if (replaceExistingDerivative && existingDerivative) {
+      return vers.map((v) =>
+        v.versionType === 'derivative' && !v.onChainTokenId ? nextVer : v
+      );
+    }
+    return [...vers, nextVer];
+  };
+
+  const updatedVersionsRaw = mergeVersions(archive.versions, false);
+  const updatedVersionsHydrated = mergeVersions(archive.versions, true);
+
+  setState((state) => ({
+    archives: state.archives.map((item) =>
+      item.id === archive.id
+        ? {
+            ...item,
+            paymentTxHash: paymentTxHash || item.paymentTxHash,
+            restorationFeePaid: restorationFeePaid || item.restorationFeePaid,
+            versions: updatedVersionsHydrated,
+            updatedAt: nowDate,
+          }
+        : item
+    ),
+  }));
+
+  if (!archive.id.startsWith('ONCHAIN-')) {
+    try {
+      await patchSubmissionOnServer(archive.id, {
+        paymentTxHash: paymentTxHash || archive.paymentTxHash,
+        restorationFeePaid: restorationFeePaid || archive.restorationFeePaid,
+        versions: updatedVersionsRaw,
+        updatedAt: nowDate,
+      });
+    } catch (err) {
+      const patchErr =
+        err instanceof Error ? err.message : 'Gagal memperbarui metadata pengajuan.';
+      uploadWarning = uploadWarning ? `${uploadWarning} ${patchErr}` : patchErr;
+    }
+  }
+
+  return {
+    success: true,
+    warning: uploadWarning,
+    txHash: paymentTxHash,
+    requestId,
+    feeEth,
+    newVersion: hydratedVersion,
+  };
+}
+
 interface ArchiveStore {
   viewMode: ViewMode;
   publicTab: PublicTab;
@@ -129,6 +262,8 @@ interface ArchiveStore {
   archives: ArchiveItem[];
   isSyncingArchives: boolean;
   syncError: string | null;
+  restoringArchiveId: string | null;
+  restorationStage: RestorationStage;
   wallet: WalletState;
   restorationFeeEth: string | null;
   restorationFeeError: string | null;
@@ -169,14 +304,12 @@ interface ArchiveStore {
   requestPaidRestoration: (
     id: string,
     onStage?: (stage: TxStage | 'enhancing') => void
-  ) => Promise<{
-    success: boolean;
-    error?: string;
-    txHash?: string;
-    requestId?: number;
-    feeEth?: string;
-    newVersion?: ArchiveVersion;
-  }>;
+  ) => Promise<RestorationActionResult>;
+
+  retryEnhanceWithExistingRequest: (
+    id: string,
+    onStage?: (stage: TxStage | 'enhancing') => void
+  ) => Promise<RestorationActionResult>;
 
   runSuperResolutionForArchive: (
     id: string
@@ -216,6 +349,8 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   archives: [],
   isSyncingArchives: false,
   syncError: null,
+  restoringArchiveId: null,
+  restorationStage: 'idle',
   restorationFeeEth: null,
   restorationFeeError: null,
   searchQuery: '',
@@ -676,6 +811,14 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
   },
 
   requestPaidRestoration: async (id, onStage) => {
+    const activeJobId = get().restoringArchiveId;
+    if (activeJobId) {
+      return {
+        success: false,
+        error: `Proses restorasi untuk arsip ${activeJobId} masih berjalan. Tunggu hingga selesai sebelum memulai transaksi baru.`,
+      };
+    }
+
     const archive = get().archives.find((a) => a.id === id);
     if (!archive) return { success: false, error: 'Arsip tidak ditemukan.' };
 
@@ -701,6 +844,12 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
       };
     }
 
+    set({ restoringArchiveId: id, restorationStage: 'waiting_wallet' });
+    const updateStage = (stage: TxStage | 'enhancing') => {
+      set({ restorationStage: stage });
+      onStage?.(stage);
+    };
+
     try {
       const chainId = get().wallet.chainId;
 
@@ -708,100 +857,21 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
       const payResult = await submitRestorationRequest(
         chainId,
         originalVer.onChainTokenId,
-        (stage) => onStage?.(stage)
+        updateStage
       );
 
-      // 2. Setelah receipt sukses, jalankan /enhance pada backend dengan request_id
-      onStage?.('enhancing');
-      const srResult = await enhancePhotoWithSR(
-        originalVer.imageUrl,
-        payResult.requestId
+      // 2. Jalankan /enhance, hitung SHA-256, simpan ke backend storage, & perbarui state
+      return await runEnhanceAndPersist(
+        archive,
+        originalVer,
+        payResult.requestId,
+        payResult.txHash,
+        `${payResult.feeEth} ETH`,
+        payResult.feeEth,
+        false,
+        updateStage,
+        set
       );
-
-      // 3. Hitung SHA-256 berkas hasil SR secara nyata
-      const srHash = await computeFileSHA256(srResult.blob);
-
-      // 4. Simpan PNG hasil SR ke backend penyimpanan pra-mint agar persisten saat refresh
-      let storedSrUrl = srResult.imageUrl;
-      let storedDimensions: string | undefined;
-      if (!archive.id.startsWith('ONCHAIN-')) {
-        try {
-          const uploaded = await uploadDerivativeFileOnServer(
-            archive.id,
-            srResult.blob,
-            `${archive.id}_sr_x${srResult.scale}.png`
-          );
-          storedSrUrl = uploaded.url;
-          storedDimensions = uploaded.dimensions;
-        } catch {
-          // Gunakan ObjectURL sesi jika penyimpanan sekunder gagal
-        }
-      }
-
-      const nowDate = formatCurrentDate();
-      const nowTs = formatCurrentTimestamp();
-
-      const rawDerivativeVersion: ArchiveVersion = {
-        versionNumber: archive.versions.length + 1,
-        versionType: 'derivative',
-        label: `Super-Resolution x${srResult.scale} (Menunggu Terbit On-Chain)`,
-        parentId: String(originalVer.onChainTokenId),
-        ipfsCid: '',
-        fileHash: srHash,
-        requestId: payResult.requestId,
-        transactionHash: payResult.txHash,
-        onChainVerified: false,
-        fileName: `${archive.id}_sr_x${srResult.scale}.png`,
-        fileSizeBytes: srResult.blob.size,
-        dimensions: storedDimensions,
-        timestamp: nowTs,
-        methodLabel: `${srResult.method} x${srResult.scale} (${srResult.modelVersion}${srResult.isMock ? ' · mock' : ''})`,
-        modelVersion: srResult.modelVersion,
-        imageUrl: storedSrUrl,
-      };
-
-      const hydratedVersion: ArchiveVersion = {
-        ...rawDerivativeVersion,
-        imageUrl: resolveMediaUrl(storedSrUrl),
-      };
-
-      const updatedVersionsRaw = [...archive.versions, rawDerivativeVersion];
-      const updatedVersionsHydrated = [...archive.versions, hydratedVersion];
-
-      set((state) => ({
-        archives: state.archives.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                paymentTxHash: payResult.txHash,
-                restorationFeePaid: `${payResult.feeEth} ETH`,
-                versions: updatedVersionsHydrated,
-                updatedAt: nowDate,
-              }
-            : item
-        ),
-      }));
-
-      if (!archive.id.startsWith('ONCHAIN-')) {
-        try {
-          await patchSubmissionOnServer(archive.id, {
-            paymentTxHash: payResult.txHash,
-            restorationFeePaid: `${payResult.feeEth} ETH`,
-            versions: updatedVersionsRaw,
-            updatedAt: nowDate,
-          });
-        } catch {
-          // State lokal sudah menyimpan versi SR & requestId
-        }
-      }
-
-      return {
-        success: true,
-        txHash: payResult.txHash,
-        requestId: payResult.requestId,
-        feeEth: payResult.feeEth,
-        newVersion: hydratedVersion,
-      };
     } catch (err) {
       return {
         success: false,
@@ -810,6 +880,68 @@ export const useArchiveStore = create<ArchiveStore>((set, get) => ({
             ? err.message
             : 'Gagal memproses pembayaran on-chain atau layanan SR.',
       };
+    } finally {
+      set({ restoringArchiveId: null, restorationStage: 'idle' });
+    }
+  },
+
+  retryEnhanceWithExistingRequest: async (id, onStage) => {
+    const activeJobId = get().restoringArchiveId;
+    if (activeJobId) {
+      return {
+        success: false,
+        error: `Proses restorasi untuk arsip ${activeJobId} masih berjalan. Tunggu hingga selesai.`,
+      };
+    }
+
+    const archive = get().archives.find((a) => a.id === id);
+    if (!archive) return { success: false, error: 'Arsip tidak ditemukan.' };
+
+    const originalVer =
+      archive.versions.find((v) => v.versionType === 'original') ||
+      archive.versions[0];
+    const derivativeVer = archive.versions.find(
+      (v) => v.versionType === 'derivative'
+    );
+
+    if (!originalVer?.onChainTokenId) {
+      return { success: false, error: 'Versi asli belum tercatat on-chain.' };
+    }
+    if (!derivativeVer?.requestId) {
+      return { success: false, error: 'Tidak ditemukan Request ID pembayaran yang belum terbit.' };
+    }
+    if (derivativeVer.onChainTokenId) {
+      return { success: false, error: 'Versi turunan ini sudah tercatat on-chain.' };
+    }
+
+    set({ restoringArchiveId: id, restorationStage: 'enhancing' });
+    const updateStage = (stage: TxStage | 'enhancing') => {
+      set({ restorationStage: stage });
+      onStage?.(stage);
+    };
+
+    try {
+      return await runEnhanceAndPersist(
+        archive,
+        originalVer,
+        derivativeVer.requestId,
+        derivativeVer.transactionHash || archive.paymentTxHash || '',
+        archive.restorationFeePaid,
+        undefined,
+        true,
+        updateStage,
+        set
+      );
+    } catch (err) {
+      return {
+        success: false,
+        error:
+          err instanceof Error
+            ? err.message
+            : 'Gagal memproses ulang layanan SR dengan Request ID yang ada.',
+      };
+    } finally {
+      set({ restoringArchiveId: null, restorationStage: 'idle' });
     }
   },
 

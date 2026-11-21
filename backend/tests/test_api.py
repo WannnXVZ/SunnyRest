@@ -322,3 +322,26 @@ def test_persistent_submissions_lifecycle_and_exact_hash(tmp_path):
         assert patched.status_code == 200
         assert patched.json()["status"] == "disetujui"
         assert patched.json()["curatorNotes"] == "Layak terbit"
+
+        # Uji batas MAX_DERIVATIVE_BYTES pada upload-file dan ipfs/pin-file (lolos di atas MAX_UPLOAD_BYTES, ditolak bila melebihi MAX_DERIVATIVE_BYTES)
+        with patch.object(settings, "MAX_UPLOAD_BYTES", 50), patch.object(
+            settings, "MAX_DERIVATIVE_BYTES", len(sr_bytes) + 100
+        ):
+            allowed_sr = client.post(
+                "/submissions/SR-0001/upload-file",
+                files={"file": ("sr_ok.png", sr_bytes, "image/png")},
+            )
+            assert allowed_sr.status_code == 200
+
+        with patch.object(settings, "MAX_DERIVATIVE_BYTES", 10):
+            too_big_sr = client.post(
+                "/submissions/SR-0001/upload-file",
+                files={"file": ("sr_big.png", sr_bytes, "image/png")},
+            )
+            assert too_big_sr.status_code == 413
+
+            too_big_pin = client.post(
+                "/ipfs/pin-file",
+                files={"file": ("sr_big.png", sr_bytes, "image/png")},
+            )
+            assert too_big_pin.status_code == 413

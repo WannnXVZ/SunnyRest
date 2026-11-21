@@ -24,7 +24,8 @@ class Settings(BaseSettings):
 
     # CORS & Batas Input
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
-    MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024  # 10 MB
+    MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024  # 10 MB untuk input asli
+    MAX_DERIVATIVE_BYTES: int = 50 * 1024 * 1024  # 50 MB untuk output PNG x4 & pinning IPFS
     MAX_IMAGE_DIM: int = 2048
 
     # Verifikasi Pembayaran On-Chain (PRD Biaya Restorasi 0,01 ETH)

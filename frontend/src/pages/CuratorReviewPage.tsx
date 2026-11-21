@@ -156,6 +156,13 @@ export const CuratorReviewPage: React.FC = () => {
   };
 
   const scoresMap = activeArchive.aiPrediction.scores;
+  const topAiCategory: PhotoCategory = scoresMap
+    ? CATEGORIES.reduce(
+        (best, cat) =>
+          Number(scoresMap[cat] ?? 0) > Number(scoresMap[best] ?? 0) ? cat : best,
+        CATEGORIES[0]
+      )
+    : activeArchive.aiPrediction.category;
   const imgSrc = targetVersion?.imageUrl ? resolveMediaUrl(targetVersion.imageUrl) : '';
 
   const stageLabel =
@@ -398,7 +405,7 @@ export const CuratorReviewPage: React.FC = () => {
                 {CATEGORIES.map((cat) => {
                   const score = Number(scoresMap[cat] ?? 0);
                   const pct = (score * 100).toFixed(1);
-                  const isTop = activeArchive.aiPrediction.category === cat;
+                  const isTop = topAiCategory === cat;
                   return (
                     <div key={cat} className="space-y-1">
                       <div className="flex items-center justify-between text-[11px]">

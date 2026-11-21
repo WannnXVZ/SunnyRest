@@ -12,13 +12,16 @@ export const RestorationPage: React.FC = () => {
     setSelectedArchiveId,
     setActivePage,
     requestPaidRestoration,
+    retryEnhanceWithExistingRequest,
+    restoringArchiveId,
+    restorationStage,
     updateArchiveStatus,
     restorationFeeEth,
   } = useArchiveStore();
 
   const selectedArchive = archives.find((a) => a.id === selectedArchiveId) || archives[0];
-  const [isRunningSR, setIsRunningSR] = useState(false);
   const [srError, setSrError] = useState<string | null>(null);
+  const [srNotice, setSrNotice] = useState<string | null>(null);
   const [manualCategory, setManualCategory] = useState<PhotoCategory>(
     selectedArchive?.finalCategory || 'bangunan'
   );
@@ -82,15 +85,47 @@ export const RestorationPage: React.FC = () => {
 
   const origImgSrc = originalVersion?.imageUrl ? resolveMediaUrl(originalVersion.imageUrl) : '';
   const derivImgSrc = derivativeVersion?.imageUrl ? resolveMediaUrl(derivativeVersion.imageUrl) : '';
+  const isRunningSR = restoringArchiveId === selectedArchive.id;
+  const isBusyAnother = Boolean(restoringArchiveId && restoringArchiveId !== selectedArchive.id);
+  const needsPersistenceRecovery = Boolean(
+    derivativeVersion?.requestId &&
+      !derivativeVersion.onChainTokenId &&
+      derivativeVersion.imageUrl.startsWith('blob:')
+  );
+
+  const stageText =
+    restorationStage === 'waiting_wallet'
+      ? 'Menunggu tanda tangan MetaMask...'
+      : restorationStage === 'waiting_confirmation'
+      ? 'Menunggu konfirmasi transaksi on-chain...'
+      : restorationStage === 'enhancing'
+      ? 'Menjalankan Super-Resolution x4 di backend...'
+      : 'Memproses transaksi & super-resolution...';
 
   const handleRunSR = async () => {
-    setIsRunningSR(true);
     setSrError(null);
+    setSrNotice(null);
     const res = await requestPaidRestoration(selectedArchive.id);
     if (!res.success && res.error) {
       setSrError(res.error);
+    } else if (res.warning) {
+      setSrNotice(res.warning);
     }
-    setIsRunningSR(false);
+  };
+
+  const handleRetryExistingRequest = async () => {
+    setSrError(null);
+    setSrNotice(null);
+    const res = await retryEnhanceWithExistingRequest(selectedArchive.id);
+    if (!res.success && res.error) {
+      setSrError(res.error);
+    } else if (res.warning) {
+      setSrNotice(res.warning);
+    } else if (res.success) {
+      setSrNotice(
+        `Berhasil diproses ulang memakai Request #${res.requestId} dan tersimpan permanen di backend.`
+      );
+    }
   };
 
   const handleCategoryCorrection = async (cat: PhotoCategory) => {
@@ -185,7 +220,16 @@ export const RestorationPage: React.FC = () => {
           <div className="space-y-1">
             <p className="text-xs font-mono text-ink-muted">Kategori prediksi</p>
             <p className="text-3xl font-display font-bold text-ink capitalize">
-              {selectedArchive.aiPrediction.category}
+              {selectedArchive.aiPrediction.scores
+                ? (['bangunan', 'lanskap', 'orang'] as PhotoCategory[]).reduce(
+                    (best, cat) =>
+                      Number(selectedArchive.aiPrediction.scores?.[cat] ?? 0) >
+                      Number(selectedArchive.aiPrediction.scores?.[best] ?? 0)
+                        ? cat
+                        : best,
+                    'bangunan'
+                  )
+                : selectedArchive.aiPrediction.category}
             </p>
             <p className="text-xs font-mono text-ink-muted">
               {selectedArchive.aiPrediction.confidence > 0
@@ -249,33 +293,73 @@ export const RestorationPage: React.FC = () => {
               </div>
             )}
 
-            <button
-              type="button"
-              disabled={isRunningSR || !!derivativeVersion}
-              onClick={() => void handleRunSR()}
-              className={`w-full py-2.5 px-4 rounded-btn text-xs font-semibold flex items-center justify-center gap-2 min-h-[44px] transition-colors ${
-                derivativeVersion
-                  ? 'bg-paper text-ink-muted border border-border cursor-not-allowed'
-                  : 'bg-forest hover:bg-forest-hover text-surface shadow-subtle'
-              }`}
-            >
-              {isRunningSR ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Memproses transaksi &amp; super-resolution...</span>
-                </>
-              ) : derivativeVersion ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-forest" />
-                  <span>Versi turunan telah dibuat</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  <span>Bayar &amp; Jalankan Model SR x4</span>
-                </>
-              )}
-            </button>
+            {srNotice && (
+              <div className="p-3 rounded-btn bg-gold-light border border-gold-border text-xs text-ink">
+                {srNotice}
+              </div>
+            )}
+
+            {isBusyAnother && (
+              <div className="p-3 rounded-btn bg-paper border border-border text-xs font-mono text-ink-muted">
+                Sedang memproses restorasi untuk arsip {restoringArchiveId}...
+              </div>
+            )}
+
+            {needsPersistenceRecovery ? (
+              <div className="space-y-2.5">
+                <div className="p-3 rounded-btn bg-status-warningBg border border-border text-xs text-status-warning leading-relaxed">
+                  Berkas SR x4 sebelumnya belum tersimpan permanen di disk server (`blob:` sementara). Gunakan ulang Request #{derivativeVersion?.requestId} yang sudah dibayar — tanpa bayar ETH lagi.
+                </div>
+                <button
+                  type="button"
+                  disabled={isRunningSR || isBusyAnother}
+                  onClick={() => void handleRetryExistingRequest()}
+                  className="w-full py-2.5 px-4 rounded-btn text-xs font-semibold flex items-center justify-center gap-2 min-h-[44px] transition-colors bg-gold hover:bg-gold-hover text-ink shadow-subtle disabled:opacity-50"
+                >
+                  {isRunningSR ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{stageText}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>
+                        Proses &amp; Simpan Ulang SR (Pakai Request #{derivativeVersion?.requestId}, Gratis)
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={isRunningSR || isBusyAnother || !!derivativeVersion}
+                onClick={() => void handleRunSR()}
+                className={`w-full py-2.5 px-4 rounded-btn text-xs font-semibold flex items-center justify-center gap-2 min-h-[44px] transition-colors ${
+                  derivativeVersion && !isRunningSR
+                    ? 'bg-paper text-ink-muted border border-border cursor-not-allowed'
+                    : 'bg-forest hover:bg-forest-hover text-surface shadow-subtle disabled:opacity-60'
+                }`}
+              >
+                {isRunningSR ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{stageText}</span>
+                  </>
+                ) : derivativeVersion ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-forest" />
+                    <span>Versi turunan telah dibuat</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Bayar &amp; Jalankan Model SR x4</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -43,6 +43,7 @@ export const UploadPage: React.FC = () => {
   const [isDuplicate, setIsDuplicate] = useState<boolean>(false);
   const [duplicateReason, setDuplicateReason] = useState<string | null>(null);
 
+  const [aiCategory, setAiCategory] = useState<PhotoCategory | null>(null);
   const [aiConfidence, setAiConfidence] = useState<number | null>(null);
   const [aiScores, setAiScores] = useState<Record<PhotoCategory, number> | undefined>(undefined);
   const [aiModelVersion, setAiModelVersion] = useState<string | undefined>(undefined);
@@ -120,6 +121,7 @@ export const UploadPage: React.FC = () => {
       try {
         const pred = await predictPhotoCategory(file);
         setCategory(pred.label);
+        setAiCategory(pred.label);
         setAiConfidence(pred.confidence);
         setAiScores(pred.scores);
         setAiModelVersion(pred.model_version);
@@ -129,6 +131,7 @@ export const UploadPage: React.FC = () => {
           ).toFixed(1)}%). Keputusan final tetap pada kurator.`
         );
       } catch {
+        setAiCategory(null);
         setAiConfidence(null);
         setAiScores(undefined);
         setAiModelVersion(undefined);
@@ -196,7 +199,7 @@ export const UploadPage: React.FC = () => {
       finalCategory: category,
       status: 'menunggu_tinjauan',
       aiPrediction: {
-        category,
+        category: aiCategory ?? category,
         confidence: aiConfidence ?? 0,
         scores: aiScores,
         modelVersion: aiModelVersion,
@@ -228,6 +231,7 @@ export const UploadPage: React.FC = () => {
     setFileHash('');
     setIsDuplicate(false);
     setDuplicateReason(null);
+    setAiCategory(null);
     setAiConfidence(null);
     setAiScores(undefined);
     setAiModelVersion(undefined);

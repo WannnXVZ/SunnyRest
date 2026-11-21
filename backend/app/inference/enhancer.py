@@ -1,13 +1,16 @@
+import logging
 import math
 import os
 import sys
-import torch
 import numpy as np
+import torch
 from PIL import Image
 
 # Import arsitektur dari ml/sr_eval.py
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "ml"))
 from sr_eval import RRDBNet
+
+logger = logging.getLogger("sunnyrest.sr")
 
 
 class RealESRGANEnhancer:
@@ -20,25 +23,32 @@ class RealESRGANEnhancer:
         self.tile_size = tile_size
         self.tile_pad = tile_pad
         self.device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.use_half = self.device.type == "cuda"
         self.model = RRDBNet(num_in_ch=3, num_out_ch=3, scale=self.scale, num_feat=64, num_block=23, num_grow_ch=32)
 
         ckpt = torch.load(model_path, map_location=self.device, weights_only=True)
         state = ckpt.get("params_ema", ckpt.get("params", ckpt))
         self.model.load_state_dict(state)
         self.model.to(self.device).eval()
+        if self.use_half:
+            self.model.half()
+        logger.info("Real-ESRGAN siap pada device=%s (fp16=%s)", self.device, self.use_half)
 
     @torch.no_grad()
     def enhance(self, pil_img: Image.Image) -> Image.Image:
         img = np.array(pil_img.convert("RGB")).astype(np.float32) / 255.0
         img_t = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0).to(self.device)
+        if self.use_half:
+            img_t = img_t.half()
 
         _, _, h, w = img_t.shape
         if h <= self.tile_size and w <= self.tile_size:
+            logger.info("Real-ESRGAN single-pass %dx%d pada %s", w, h, self.device)
             out_t = self.model(img_t)
         else:
             out_t = self._tile_process(img_t)
 
-        out = out_t.squeeze(0).permute(1, 2, 0).clamp(0, 1).cpu().numpy()
+        out = out_t.float().squeeze(0).permute(1, 2, 0).clamp(0, 1).cpu().numpy()
         out = (out * 255.0).round().astype(np.uint8)
         return Image.fromarray(out)
 
@@ -50,6 +60,8 @@ class RealESRGANEnhancer:
 
         tiles_x = math.ceil(width / self.tile_size)
         tiles_y = math.ceil(height / self.tile_size)
+        total_tiles = tiles_x * tiles_y
+        done = 0
 
         for y in range(tiles_y):
             for x in range(tiles_x):
@@ -77,5 +89,7 @@ class RealESRGANEnhancer:
                 output[:, :, output_start_y:output_end_y, output_start_x:output_end_x] = output_tile[
                     :, :, tile_start_y:tile_end_y, tile_start_x:tile_end_x
                 ]
+                done += 1
+                logger.info("Real-ESRGAN tile %d/%d selesai", done, total_tiles)
 
         return output

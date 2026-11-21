@@ -34,6 +34,8 @@ export const ArchiveDetailPage: React.FC = () => {
     archives,
     setActivePage,
     requestPaidRestoration,
+    restoringArchiveId,
+    restorationStage,
     restorationFeeEth,
     restorationFeeError,
     refreshRestorationFee,
@@ -47,12 +49,10 @@ export const ArchiveDetailPage: React.FC = () => {
     message: '',
   });
   const [showRestoreModal, setShowRestoreModal] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [restoreStage, setRestoreStage] = useState<
-    'idle' | 'pinning_ipfs' | 'waiting_wallet' | 'waiting_confirmation' | 'enhancing'
-  >('idle');
   const [restoredSuccessMsg, setRestoredSuccessMsg] = useState<string | null>(null);
   const [restoreErrorMsg, setRestoreErrorMsg] = useState<string | null>(null);
+  const isRestoring = Boolean(archive && restoringArchiveId === archive.id);
+  const restoreStage = isRestoring ? restorationStage : 'idle';
 
   useEffect(() => {
     void refreshRestorationFee();
@@ -99,22 +99,18 @@ export const ArchiveDetailPage: React.FC = () => {
   };
 
   const handleConfirmPaidRestore = async () => {
-    setIsRestoring(true);
     setRestoreErrorMsg(null);
-    setRestoreStage('waiting_wallet');
-
-    const res = await requestPaidRestoration(archive.id, (stage) => setRestoreStage(stage));
-    setIsRestoring(false);
-    setRestoreStage('idle');
+    const res = await requestPaidRestoration(archive.id);
 
     if (res.success) {
       setShowRestoreModal(false);
+      const warnSuffix = res.warning ? ` Catatan: ${res.warning}` : '';
       setRestoredSuccessMsg(
         `Restorasi Super-Resolution x4 selesai! Request ID #${res.requestId} (${res.feeEth} ETH) tercatat di receipt ${truncateIdentifier(
           res.txHash || '',
           10,
           8
-        )}. Kurator dapat menerbitkan versi turunan ini on-chain di halaman Peninjauan Kurator.`
+        )}. Kurator dapat menerbitkan versi turunan ini on-chain di halaman Peninjauan Kurator.${warnSuffix}`
       );
     } else {
       setRestoreErrorMsg(res.error || 'Pembayaran on-chain atau layanan SR gagal.');

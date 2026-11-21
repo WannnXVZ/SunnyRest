@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 import torch
 import torch.nn.functional as F
 from fastapi import Body, FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from PIL import Image, UnidentifiedImageError
@@ -125,13 +126,18 @@ transform = transforms.Compose([
 ])
 
 
-def _validate_image_bytes(content: bytes, check_dim: bool = False) -> Image.Image:
+def _validate_image_bytes(
+    content: bytes,
+    check_dim: bool = False,
+    max_bytes: Optional[int] = None,
+) -> Image.Image:
     if not content:
         raise HTTPException(status_code=400, detail="Berkas kosong atau rusak.")
-    if len(content) > settings.MAX_UPLOAD_BYTES:
+    limit_bytes = max_bytes if max_bytes is not None else settings.MAX_UPLOAD_BYTES
+    if len(content) > limit_bytes:
         raise HTTPException(
             status_code=413,
-            detail=f"Ukuran berkas melebihi batas maksimum {settings.MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+            detail=f"Ukuran berkas melebihi batas maksimum {limit_bytes // (1024 * 1024)} MB.",
         )
     try:
         img = Image.open(io.BytesIO(content))
@@ -190,6 +196,16 @@ async def predict(file: UploadFile = File(...)):
         raise HTTPException(status_code=503, detail=f"Kegagalan inferensi klasifikasi: {exc}") from exc
 
 
+def _run_enhance_sync(img: Image.Image) -> tuple[io.BytesIO, float]:
+    start_time = time.perf_counter()
+    enhanced_img = enhancer.enhance(img)
+    elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    buf = io.BytesIO()
+    enhanced_img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf, elapsed_ms
+
+
 @app.post("/enhance")
 async def enhance(
     file: UploadFile = File(...),
@@ -214,13 +230,8 @@ async def enhance(
 
     img = await _read_and_validate_image(file, check_dim=True)
     try:
-        start_time = time.perf_counter()
-        enhanced_img = enhancer.enhance(img)
-        elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
-
-        buf = io.BytesIO()
-        enhanced_img.save(buf, format="PNG")
-        buf.seek(0)
+        # Jalankan inferensi SR di threadpool agar /health dan endpoint lain tetap responsif
+        buf, elapsed_ms = await run_in_threadpool(_run_enhance_sync, img)
 
         headers = {
             "X-Method": "Real-ESRGAN",
@@ -244,10 +255,10 @@ async def ipfs_pin_file(file: UploadFile = File(...)):
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Berkas untuk IPFS tidak boleh kosong.")
-    if len(content) > settings.MAX_UPLOAD_BYTES:
+    if len(content) > settings.MAX_DERIVATIVE_BYTES:
         raise HTTPException(
             status_code=413,
-            detail=f"Ukuran berkas melebihi batas maksimum {settings.MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+            detail=f"Ukuran berkas melebihi batas maksimum {settings.MAX_DERIVATIVE_BYTES // (1024 * 1024)} MB.",
         )
     try:
         return pin_bytes_to_ipfs(
@@ -336,7 +347,9 @@ async def upload_derivative_file_endpoint(sub_id: str, file: UploadFile = File(.
         raise HTTPException(status_code=404, detail=f"Pengajuan {sub_id} tidak ditemukan.")
 
     raw_bytes = await file.read()
-    img = _validate_image_bytes(raw_bytes, check_dim=False)
+    img = _validate_image_bytes(
+        raw_bytes, check_dim=False, max_bytes=settings.MAX_DERIVATIVE_BYTES
+    )
     width, height = img.size
 
     stored_name, sha256_hex = save_raw_file(raw_bytes, file.filename or "derivative.png", prefix="sr")
