@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ShieldCheck, Loader2, ArrowUpRight } from 'lucide-react';
+import { Search, ShieldCheck, Loader2, ArrowUpRight, Lock } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { NETWORKS } from '../config/networks';
 import {
@@ -197,6 +197,18 @@ export const VerificationPage: React.FC = () => {
 
   const displayedTxHash =
     originalVersion?.transactionHash || txReceipt || 'Belum tersedia';
+
+  const userAddrLower = wallet.address ? wallet.address.toLowerCase() : '';
+  const ownerAddrLower = (
+    directTokenRecord?.owner ||
+    originalVersion?.ownerAddress ||
+    activeArchive?.recipientAddress ||
+    ''
+  ).toLowerCase();
+  const isAuthorized =
+    !isPublicMode ||
+    wallet.isCurator ||
+    Boolean(userAddrLower && ownerAddrLower && userAddrLower === ownerAddrLower);
 
   return (
     <div className="space-y-10">
@@ -481,7 +493,8 @@ export const VerificationPage: React.FC = () => {
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="text-ink-muted font-sans">Transaction hash / receipt</span>
-                  {activeNet?.explorerUrl &&
+                  {isAuthorized ? (
+                    activeNet?.explorerUrl &&
                     displayedTxHash.startsWith('0x') && (
                       <a
                         href={`${activeNet.explorerUrl}/tx/${displayedTxHash}`}
@@ -492,11 +505,31 @@ export const VerificationPage: React.FC = () => {
                         <span>Explorer</span>
                         <ArrowUpRight className="w-3 h-3" />
                       </a>
-                    )}
+                    )
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-status-warning bg-status-warningBg px-2 py-0.5 rounded-btn">
+                      <Lock className="w-2.5 h-2.5" />
+                      <span>Diproteksi</span>
+                    </span>
+                  )}
                 </div>
                 <div className="p-2.5 rounded-btn bg-paper border border-border text-ink select-all break-all">
-                  {displayedTxHash}
+                  {isAuthorized
+                    ? displayedTxHash
+                    : displayedTxHash.startsWith('0x')
+                    ? `${displayedTxHash.slice(0, 10)}... [Diproteksi · Hanya Pemilik Token / Kurator]`
+                    : displayedTxHash}
                 </div>
+                {!isAuthorized && displayedTxHash.startsWith('0x') && (
+                  <p className="text-[10px] font-mono text-ink-muted leading-relaxed pt-0.5">
+                    🔒 Bukti transaksi on-chain dirahasiakan untuk privasi pengunggah. Hubungkan wallet pemilik token atau masuk sebagai kurator untuk melihat receipt lengkap.
+                  </p>
+                )}
+                {isAuthorized && displayedTxHash.startsWith('0x') && isPublicMode && (
+                  <p className="text-[10px] font-mono text-forest leading-relaxed pt-0.5">
+                    🔓 Akses Terverifikasi: Anda terhubung sebagai {wallet.isCurator ? 'Kurator Resmi' : 'Pemilik Token Sah'}. Bukti transaksi lengkap dibuka.
+                  </p>
+                )}
               </div>
             </div>
           </div>

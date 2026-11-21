@@ -14,6 +14,7 @@ import { CuratorReviewPage } from './pages/CuratorReviewPage';
 import { VerificationPage } from './pages/VerificationPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { OverviewPage } from './pages/OverviewPage';
+import { ContributorDashboardPage } from './pages/ContributorDashboardPage';
 
 export const App: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -37,6 +38,8 @@ export const App: React.FC = () => {
           return <UploadPage />;
         case 'verifikasi':
           return <VerificationPage />;
+        case 'pemohon':
+          return <ContributorDashboardPage />;
         default:
           return (
             <div className="bg-surface border border-border rounded-card p-10 max-w-lg mx-auto text-center space-y-5 my-12 shadow-card">
@@ -90,6 +93,8 @@ export const App: React.FC = () => {
         return <VerificationPage />;
       case 'pengaturan':
         return <SettingsPage />;
+      case 'pemohon':
+        return <ContributorDashboardPage />;
       default:
         return <OverviewPage />;
     }

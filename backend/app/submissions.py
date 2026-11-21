@@ -21,6 +21,8 @@ PATCHABLE_FIELDS = {
     "versions",
     "updatedAt",
     "chainId",
+    "visibility",
+    "isPrivate",
 }
 
 

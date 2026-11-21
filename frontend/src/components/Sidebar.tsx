@@ -146,7 +146,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
         <div className="p-4 border-t border-border/60 bg-paper/60 space-y-2">
           <button
             type="button"
-            onClick={() => useArchiveStore.getState().setViewMode('public')}
+            onClick={() => {
+              const store = useArchiveStore.getState();
+              store.setViewMode('public');
+              store.setActivePage('arsip');
+            }}
             className="w-full py-2 px-3 rounded-btn bg-surface hover:bg-paper border border-border text-forest text-xs font-semibold flex items-center justify-center gap-2 shadow-subtle min-h-[38px] transition-colors"
           >
             <span>Buka Portal Publik</span>

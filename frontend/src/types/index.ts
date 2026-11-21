@@ -57,6 +57,8 @@ export interface ArchiveItem {
   originalCid: string;
   paymentTxHash?: string;
   restorationFeePaid?: string;
+  visibility?: 'public' | 'private';
+  isPrivate?: boolean;
   versions: ArchiveVersion[];
   createdAt: string;
   updatedAt: string;
@@ -70,7 +72,8 @@ export type NavigationPage =
   | 'restorasi'
   | 'kurator'
   | 'verifikasi'
-  | 'pengaturan';
+  | 'pengaturan'
+  | 'pemohon';
 
 export type ViewMode = 'public' | 'login' | 'workspace';
 export type PublicTab = 'semua' | 'unggah_restorasi' | 'restorasi' | 'verifikasi';

@@ -52,7 +52,7 @@ export const ArchiveGalleryPage: React.FC = () => {
 
   const filteredArchives = archives
     .filter((item) => {
-      if (isPublicMode && item.status !== 'tercatat') {
+      if (isPublicMode && (item.status !== 'tercatat' || item.visibility === 'private' || item.isPrivate)) {
         return false;
       }
 
@@ -89,19 +89,19 @@ export const ArchiveGalleryPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      {/* Top Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-2">
-        <div className="space-y-2">
+    <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Top Header Section - Compact & Gallery-focused */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pt-1 border-b border-border/60 pb-4">
+        <div className="space-y-1">
           <p className="text-[11px] font-mono font-medium tracking-wider text-ink-muted uppercase">
-            {isPublicMode ? 'KOLEKSI / ARSIP FOTO PUBLIK' : 'WORKSPACE / MANAJEMEN KOLEKSI ARSIP'}
+            {isPublicMode ? 'GALERI ARSIP TERVERIFIKASI' : 'WORKSPACE / MANAJEMEN KOLEKSI ARSIP'}
           </p>
-          <h1 className="text-3xl sm:text-4xl font-display font-bold text-ink tracking-tight">
-            {isPublicMode ? 'Jejak yang tetap hidup.' : 'Koleksi & Status Kurasi Arsip.'}
+          <h1 className="text-2xl sm:text-3xl font-display font-bold text-ink tracking-tight">
+            {isPublicMode ? 'Galeri Arsip Foto' : 'Koleksi & Status Kurasi Arsip.'}
           </h1>
-          <p className="text-sm text-ink-muted font-sans max-w-2xl leading-relaxed">
+          <p className="text-xs text-ink-muted font-sans max-w-2xl leading-relaxed">
             {isPublicMode
-              ? 'Telusuri foto terverifikasi on-chain, kenali sumbernya, dan ikuti setiap versi dalam satu arsip.'
+              ? 'Koleksi foto berizin yang telah divalidasi kurator on-chain dan tersimpan permanen di smart contract & IPFS.'
               : 'Pantau berkas masuk dari kontributor warga, periksa dokumen izin, dan terbitkan token versi ERC-721.'}
           </p>
         </div>
@@ -111,21 +111,23 @@ export const ArchiveGalleryPage: React.FC = () => {
             type="button"
             onClick={() => void syncArchives()}
             disabled={isSyncingArchives}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-btn bg-surface hover:bg-paper border border-border text-ink text-xs font-mono shadow-subtle min-h-[42px] transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-btn bg-surface hover:bg-paper border border-border text-ink text-xs font-mono shadow-subtle min-h-[38px] transition-colors"
             title="Sinkronkan arsip dari backend dan smart contract"
           >
             <RotateCw className={`w-3.5 h-3.5 text-forest ${isSyncingArchives ? 'animate-spin' : ''}`} />
             <span>{isSyncingArchives ? 'Sinkronisasi...' : 'Sinkronkan'}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActivePage('unggah')}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle min-h-[42px] transition-colors"
-          >
-            <Plus className="w-4 h-4 text-ink" />
-            <span>{isPublicMode ? 'Unggah pengajuan' : 'Unggah arsip institusi'}</span>
-          </button>
+          {!isPublicMode && (
+            <button
+              type="button"
+              onClick={() => setActivePage('unggah')}
+              className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-semibold shadow-subtle min-h-[38px] transition-colors"
+            >
+              <Plus className="w-4 h-4 text-ink" />
+              <span>Unggah arsip institusi</span>
+            </button>
+          )}
         </div>
       </div>
 

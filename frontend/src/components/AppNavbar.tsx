@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Wallet, Lock } from 'lucide-react';
+import { Sun, Wallet, Lock, User } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { truncateIdentifier } from '../lib/hash';
 
@@ -15,9 +15,8 @@ export const AppNavbar: React.FC = () => {
     restorationFeeEth,
   } = useArchiveStore();
 
-  const navItems: { page: 'arsip' | 'unggah' | 'verifikasi'; label: string }[] = [
+  const navItems: { page: 'arsip' | 'verifikasi'; label: string }[] = [
     { page: 'arsip', label: 'Galeri arsip' },
-    { page: 'unggah', label: 'Unggah pengajuan' },
     { page: 'verifikasi', label: 'Verifikasi terbuka' },
   ];
 
@@ -116,24 +115,55 @@ export const AppNavbar: React.FC = () => {
             )}
           </button>
 
-          {/* Workspace Kurator Gate Button */}
-          <button
-            type="button"
-            onClick={() => {
-              if (isWorkspaceAuthenticated) {
-                setViewMode('workspace');
-                setActivePage('ringkasan');
-              } else {
-                setViewMode('login');
-              }
-            }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle transition-colors min-h-[36px]"
-            title="Masuk ke Workspace Kurator (Memerlukan Wallet)"
-          >
-            <Lock className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Workspace Kurator</span>
-            <span className="sm:hidden">Workspace</span>
-          </button>
+          {/* Role-Based Action Button: Curators get Workspace, Pemohon gets Dashboard Pemohon */}
+          {!wallet.isConnected ? (
+            <button
+              type="button"
+              onClick={() => void connectWallet()}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle transition-colors min-h-[36px]"
+              title="Hubungkan MetaMask untuk mengakses Dashboard Pemohon atau Workspace Kurator"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Hubungkan Wallet</span>
+              <span className="sm:hidden">Masuk</span>
+            </button>
+          ) : wallet.isCurator ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (isWorkspaceAuthenticated) {
+                  setViewMode('workspace');
+                  setActivePage('ringkasan');
+                } else {
+                  setViewMode('login');
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-semibold shadow-subtle transition-colors min-h-[36px]"
+              title="Masuk ke Workspace Kurator (Akun Berperan Kurator)"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Workspace Kurator</span>
+              <span className="sm:hidden">Workspace</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('public');
+                setActivePage('pemohon');
+              }}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-btn text-surface text-xs font-semibold shadow-subtle transition-colors min-h-[36px] ${
+                activePage === 'pemohon'
+                  ? 'bg-forest-hover ring-2 ring-forest/40'
+                  : 'bg-forest hover:bg-forest-hover'
+              }`}
+              title="Buka Dashboard Pemohon (Pengajuan Saya & Bukti Transaksi)"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Dashboard Pemohon</span>
+              <span className="sm:hidden">Dashboard</span>
+            </button>
+          )}
         </div>
       </header>
     </div>

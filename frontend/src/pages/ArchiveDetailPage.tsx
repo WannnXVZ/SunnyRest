@@ -13,6 +13,7 @@ import {
   Shield,
   AlertTriangle,
   ImageOff,
+  Lock,
 } from 'lucide-react';
 import { useArchiveStore } from '../store/useArchiveStore';
 import { NETWORKS } from '../config/networks';
@@ -85,6 +86,15 @@ export const ArchiveDetailPage: React.FC = () => {
   const origImgSrc = originalVersion?.imageUrl ? resolveMediaUrl(originalVersion.imageUrl) : '';
   const derivImgSrc = derivativeVersion?.imageUrl ? resolveMediaUrl(derivativeVersion.imageUrl) : '';
   const activeNet = NETWORKS[wallet.chainId];
+  const userAddrLower = wallet.address ? wallet.address.toLowerCase() : '';
+  const ownerAddrLower = (
+    originalVersion?.ownerAddress ||
+    archive.recipientAddress ||
+    ''
+  ).toLowerCase();
+  const isAuthorized =
+    wallet.isCurator ||
+    Boolean(userAddrLower && ownerAddrLower && userAddrLower === ownerAddrLower);
 
   const handleCreateRestoration = () => {
     setRestoreErrorMsg(null);
@@ -450,15 +460,22 @@ export const ArchiveDetailPage: React.FC = () => {
               </span>
 
               {activeNet?.explorerUrl && originalVersion?.transactionHash && (
-                <a
-                  href={`${activeNet.explorerUrl}/tx/${originalVersion.transactionHash}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-mono text-forest hover:underline"
-                >
-                  <span>Lihat di Etherscan</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </a>
+                isAuthorized ? (
+                  <a
+                    href={`${activeNet.explorerUrl}/tx/${originalVersion.transactionHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-mono text-forest hover:underline"
+                  >
+                    <span>Lihat di Etherscan</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-muted">
+                    <Lock className="w-3 h-3 text-gold" />
+                    <span>Receipt diproteksi</span>
+                  </span>
+                )
               )}
             </div>
           </div>
@@ -513,10 +530,24 @@ export const ArchiveDetailPage: React.FC = () => {
 
               {originalVersion?.transactionHash && (
                 <div className="p-3.5 rounded-btn bg-paper/80 border border-border space-y-1">
-                  <p className="text-[11px] text-ink-muted">Transaction Hash Minting</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] text-ink-muted">Transaction Hash Minting</p>
+                    {!isAuthorized && (
+                      <span className="text-[10px] text-status-warning bg-status-warningBg px-2 py-0.5 rounded-btn font-mono">
+                        Diproteksi
+                      </span>
+                    )}
+                  </div>
                   <p className="text-ink text-[11px] break-all select-all font-mono leading-relaxed">
-                    {originalVersion.transactionHash}
+                    {isAuthorized
+                      ? originalVersion.transactionHash
+                      : `${originalVersion.transactionHash.slice(0, 10)}... [Hanya Pemilik / Kurator]`}
                   </p>
+                  {!isAuthorized && (
+                    <p className="text-[10px] text-ink-muted font-mono pt-0.5">
+                      🔒 Bukti transaksi dirahasiakan untuk pengunjung umum.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

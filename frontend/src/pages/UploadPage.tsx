@@ -58,6 +58,7 @@ export const UploadPage: React.FC = () => {
   const [contextNotes, setContextNotes] = useState('');
   const [customRecipient, setCustomRecipient] = useState('');
   const [category, setCategory] = useState<PhotoCategory>('bangunan');
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [hasConsent, setHasConsent] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -198,6 +199,8 @@ export const UploadPage: React.FC = () => {
       initialCategory: category,
       finalCategory: category,
       status: 'menunggu_tinjauan',
+      visibility: visibility,
+      isPrivate: visibility === 'private',
       aiPrediction: {
         category: aiCategory ?? category,
         confidence: aiConfidence ?? 0,
@@ -299,16 +302,25 @@ export const UploadPage: React.FC = () => {
                 Buka Peninjauan Kurator Sekarang
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedArchiveId(submittedArchiveId);
-                  setActivePage('detail');
-                }}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
-              >
-                Lihat Pratinjau Arsip
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActivePage('pemohon')}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-forest hover:bg-forest-hover text-surface text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
+                >
+                  Buka Dashboard Pemohon
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedArchiveId(submittedArchiveId);
+                    setActivePage('detail');
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-btn bg-gold hover:bg-gold-hover text-ink text-xs font-bold shadow-subtle transition-colors min-h-[42px]"
+                >
+                  Lihat Pratinjau Arsip
+                </button>
+              </>
             )}
             <button
               type="button"
@@ -647,6 +659,68 @@ export const UploadPage: React.FC = () => {
 
             <p className="text-[11px] font-mono text-ink-muted">
               Jaringan aktif: {wallet.chainName} ({wallet.chainId}). Token asli akan memiliki parentId = 0.
+            </p>
+          </div>
+
+          {/* Section 4: Visibilitas & Privasi Arsip */}
+          <div className="bg-surface border border-border rounded-card p-6 space-y-3 shadow-subtle">
+            <div>
+              <h2 className="font-display font-bold text-base text-ink">Status visibilitas arsip</h2>
+              <p className="text-xs text-ink-muted">
+                Tentukan apakah foto akan dipublikasikan ke galeri terbuka atau disimpan sebagai arsip pribadi.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <label
+                className={`flex items-start gap-3 p-3.5 rounded-btn border cursor-pointer transition-all ${
+                  visibility === 'public'
+                    ? 'bg-sage border-forest/50 text-forest'
+                    : 'bg-paper/60 border-border text-ink hover:border-forest/40'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="public"
+                  checked={visibility === 'public'}
+                  onChange={() => setVisibility('public')}
+                  className="mt-1 text-forest focus:ring-forest"
+                />
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold">🌐 Galeri Publik Terbuka</p>
+                  <p className="text-[11px] text-ink-muted leading-relaxed">
+                    Setelah disetujui kurator, foto akan ditampilkan di galeri publik untuk dilihat khalayak umum.
+                  </p>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-start gap-3 p-3.5 rounded-btn border cursor-pointer transition-all ${
+                  visibility === 'private'
+                    ? 'bg-sage border-forest/50 text-forest'
+                    : 'bg-paper/60 border-border text-ink hover:border-forest/40'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="private"
+                  checked={visibility === 'private'}
+                  onChange={() => setVisibility('private')}
+                  className="mt-1 text-forest focus:ring-forest"
+                />
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold">🔒 Kenangan Pribadi (Privat)</p>
+                  <p className="text-[11px] text-ink-muted leading-relaxed">
+                    Hanya tersimpan di Dashboard Pemohon Anda; tidak akan dimunculkan di galeri publik umum.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <p className="text-[11px] font-mono text-ink-muted leading-relaxed">
+              Catatan akademis: Status privat menyembunyikan foto dari tampilan galeri publik web. Token kepemilikan ERC-721 dan bukti transaksi tetap tercatat khusus untuk wallet Anda.
             </p>
           </div>
         </div>
