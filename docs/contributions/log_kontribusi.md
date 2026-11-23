@@ -25,5 +25,5 @@
 - **Sumber Dataset:** Intel Image Classification (`CC0 / Kaggle Open Data`), COCO Person (`CC BY 4.0`), Wikimedia Commons / KITLV (`Public Domain / CC BY 4.0`), DIV2K (`Non-komersial riset`).
 
 ## 3. Deklarasi Bantuan AI dalam Pengembangan
-- Bantuan AI digunakan untuk membantu perancangan struktur kode kontrak ERC-721, modul integrasi Web3/RPC, penulisan unit test, audit kode terhadap PRD, dan penyusunan draf dokumentasi.
-- Seluruh kode, automated tests (`npx hardhat test`, `npx hardhat coverage`, `pytest`, `vitest`, `tsc && vite build`), dan evaluasi model AI (`train_baseline.py`, `evaluate.py`, `sr_eval.py`) telah dieksekusi langsung dan diverifikasi hasilnya oleh pengembang.
+- **Asisten AI yang Digunakan:** **Antigravity (AI Coding Assistant — Google DeepMind)** digunakan sebagai alat bantu pemrograman (*pair-programming*), perancangan integrasi antarmuka Web3/RPC (`Dashboard Pemohon`, status arsip Publik/Privat, riwayat bukti transaksi), debugging endpoint FastAPI, penulisan *automated test*, penyusunan laporan/dokumentasi proyek, serta perapihan slide presentasi.
+- **Verifikasi & Tanggung Jawab Mahasiswa:** Seluruh kode kontrak, backend, frontend, hasil *automated test* (`npx hardhat test`, `npx hardhat coverage`, `pytest`, `vitest`, `tsc && vite build`), deployment Sepolia, serta evaluasi model AI (`train_baseline.py`, `evaluate.py`, `sr_eval.py`) telah ditinjau, dijalankan, dan diverifikasi langsung oleh anggota kelompok yang bertanggung jawab penuh atas seluruh isi karya.
