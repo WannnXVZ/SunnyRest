@@ -4,7 +4,9 @@ import { useArchiveStore } from '../store/useArchiveStore';
 import { NETWORKS } from '../config/networks';
 import {
   OnChainTokenRecord,
+  OnChainTxReceiptRecord,
   checkHashUsedOnChain,
+  fetchTransactionReceiptOnChain,
   fetchVersiOnChain,
   normalizeHexHash,
 } from '../lib/contract';
@@ -32,6 +34,7 @@ export const VerificationPage: React.FC = () => {
   const [searchInput, setSearchInput] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [directTokenRecord, setDirectTokenRecord] = useState<OnChainTokenRecord | null>(null);
+  const [directTxRecord, setDirectTxRecord] = useState<OnChainTxReceiptRecord | null>(null);
   const [hashOnChainStatus, setHashOnChainStatus] = useState<{
     hash: string;
     used: boolean;
@@ -73,7 +76,9 @@ export const VerificationPage: React.FC = () => {
     activeArchive?.versions.find((v) => v.versionType === 'original') ||
     activeArchive?.versions[0];
   const derivativeVersion = activeArchive?.versions.find((v) => v.versionType === 'derivative');
-  const isRecorded = Boolean(directTokenRecord || activeArchive?.status === 'tercatat');
+  const isRecorded = Boolean(
+    directTokenRecord || directTxRecord?.status === 'success' || activeArchive?.status === 'tercatat'
+  );
   const activeNet = NETWORKS[wallet.chainId];
 
   const authorizedArchives =
@@ -91,6 +96,7 @@ export const VerificationPage: React.FC = () => {
 
     setIsSearching(true);
     setDirectTokenRecord(null);
+    setDirectTxRecord(null);
     setHashOnChainStatus(null);
     setSearchFeedback(null);
 
@@ -133,22 +139,56 @@ export const VerificationPage: React.FC = () => {
       return;
     }
 
-    // Jika input hash SHA-256 (64 hex), periksa ke mapping hashTerpakai di kontrak
+    // Jika input 64 hex, cek ganda: sebagai SHA-256 berkas (hashTerpakai) DAN Transaction Hash (getTransactionReceipt)
     const hexClean = normalizeHexHash(raw);
     if (/^[0-9a-f]{64}$/.test(hexClean)) {
-      try {
-        const used = await checkHashUsedOnChain(wallet.chainId, hexClean);
-        setHashOnChainStatus({ hash: hexClean, used });
+      const [usedRes, txRes] = await Promise.allSettled([
+        checkHashUsedOnChain(wallet.chainId, hexClean),
+        fetchTransactionReceiptOnChain(wallet.chainId, `0x${hexClean}`),
+      ]);
+
+      if (usedRes.status === 'fulfilled' && usedRes.value) {
+        setHashOnChainStatus({ hash: hexClean, used: true });
         setSearchFeedback(
-          used
-            ? `Hash SHA-256 ${truncateIdentifier(hexClean, 10, 8)} tercatat TERPAKAI on-chain (hashTerpakai == true).`
-            : `Hash SHA-256 ${truncateIdentifier(hexClean, 10, 8)} belum pernah dicatat on-chain.`
+          `Hash SHA-256 ${truncateIdentifier(hexClean, 10, 8)} tercatat TERPAKAI on-chain (hashTerpakai == true).`
         );
-      } catch (err) {
+      } else if (txRes.status === 'fulfilled' && txRes.value) {
+        const txRec = txRes.value;
+        setDirectTxRecord(txRec);
+
+        if (txRec.tokenId && txRec.matchesActiveContract) {
+          try {
+            const tokenRec = await fetchVersiOnChain(wallet.chainId, txRec.tokenId);
+            setDirectTokenRecord(tokenRec);
+          } catch {
+            // Biarkan fallback ke ringkasan receipt transaksi
+          }
+        }
+
+        const statusLabel = txRec.status === 'success' ? 'TERKONFIRMASI SUKSES' : 'REVERT / GAGAL';
+        const eventDetail = txRec.tokenId
+          ? ` · Event ${txRec.eventName} (Token #${txRec.tokenId})`
+          : txRec.requestId
+          ? ` · Event ${txRec.eventName} (Request #${txRec.requestId})`
+          : '';
+        const contractNote = !txRec.matchesActiveContract
+          ? ` Catatan: transaksi ini ditujukan ke kontrak ${txRec.to || '-'} (bukan kontrak aktif ${
+              txRec.activeContractAddress
+                ? truncateIdentifier(txRec.activeContractAddress, 6, 4)
+                : 'saat ini'
+            }), sehingga merupakan riwayat dari deployment kontrak sebelumnya.`
+          : '';
+
         setSearchFeedback(
-          err instanceof Error
-            ? `Gagal mengecek hash ke kontrak: ${err.message}`
-            : 'RPC blockchain tidak dapat dijangkau.'
+          `Transaction Hash ${truncateIdentifier(txRec.txHash, 10, 8)} ditemukan on-chain (${statusLabel}, Blok #${txRec.blockNumber}${eventDetail}).${contractNote}`
+        );
+      } else if (usedRes.status === 'rejected' && txRes.status === 'rejected') {
+        const reason = txRes.reason instanceof Error ? txRes.reason.message : 'RPC blockchain tidak dapat dijangkau.';
+        setSearchFeedback(`Gagal mengecek hash ke jaringan: ${reason}`);
+      } else {
+        setHashOnChainStatus({ hash: hexClean, used: false });
+        setSearchFeedback(
+          `Hash ${truncateIdentifier(hexClean, 10, 8)} belum tercatat sebagai SHA-256 berkas maupun Transaction Hash pada jaringan ${activeNet?.name || wallet.chainId}.`
         );
       }
       setIsSearching(false);
@@ -288,12 +328,54 @@ export const VerificationPage: React.FC = () => {
         {searchFeedback && (
           <div
             className={`mt-2 p-2.5 rounded-btn text-xs font-mono border ${
-              hashOnChainStatus && !hashOnChainStatus.used
+              (hashOnChainStatus && !hashOnChainStatus.used) ||
+              directTxRecord?.status === 'reverted'
                 ? 'bg-status-warningBg border-border text-status-warning'
                 : 'bg-sage border-sage-border text-forest'
             }`}
           >
             {searchFeedback}
+          </div>
+        )}
+
+        {directTxRecord && (
+          <div className="mt-2 p-3 rounded-btn bg-paper/70 border border-border text-xs font-mono space-y-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold text-ink">
+                Bukti Transaksi On-Chain ·{' '}
+                <span className={directTxRecord.status === 'success' ? 'text-forest' : 'text-status-warning'}>
+                  {directTxRecord.status === 'success' ? 'Sukses' : 'Revert'}
+                </span>
+              </span>
+              {activeNet?.explorerUrl && (
+                <a
+                  href={`${activeNet.explorerUrl}/tx/${directTxRecord.txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-forest hover:underline"
+                >
+                  <span>Lihat di Explorer</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-[11px] text-ink-muted">
+              <p>Tx Hash: <span className="text-ink">{truncateIdentifier(directTxRecord.txHash, 10, 8)}</span></p>
+              <p>Blok: <span className="text-ink">#{directTxRecord.blockNumber}</span></p>
+              <p>Gas Used: <span className="text-ink">{directTxRecord.gasUsed}</span></p>
+              <p>Dari: <span className="text-ink">{truncateIdentifier(directTxRecord.from, 8, 6)}</span></p>
+              <p>
+                Kontrak Tujuan:{' '}
+                <span className="text-ink">
+                  {directTxRecord.to ? truncateIdentifier(directTxRecord.to, 8, 6) : 'Deploy Kontrak'}
+                </span>
+              </p>
+              {directTxRecord.tokenId !== undefined ? (
+                <p>Token ID: <span className="text-ink">#{directTxRecord.tokenId}</span> (parentId: {directTxRecord.parentId ?? 0})</p>
+              ) : directTxRecord.requestId !== undefined ? (
+                <p>Request ID: <span className="text-ink">#{directTxRecord.requestId}</span> (parentId: #{directTxRecord.parentId})</p>
+              ) : null}
+            </div>
           </div>
         )}
       </form>

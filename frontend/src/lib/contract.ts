@@ -24,6 +24,21 @@ export interface OnChainTokenRecord {
   tokenUri: string;
 }
 
+export interface OnChainTxReceiptRecord {
+  txHash: string;
+  status: 'success' | 'reverted';
+  blockNumber: number;
+  from: string;
+  to: string | null;
+  gasUsed: string;
+  matchesActiveContract: boolean;
+  activeContractAddress: string;
+  eventName?: string;
+  tokenId?: number;
+  parentId?: number;
+  requestId?: number;
+}
+
 const contractInterface = new Interface(ArsipFotoVersiABI);
 
 export function normalizeHexHash(hashHex: string): string {
@@ -247,6 +262,78 @@ export async function fetchAllOnChainVersions(
   }
 
   return records;
+}
+
+export async function fetchTransactionReceiptOnChain(
+  chainId: number,
+  txHash: string
+): Promise<OnChainTxReceiptRecord | null> {
+  const net = NETWORKS[chainId];
+  if (!net || !net.rpcUrl) {
+    throw new Error(`RPC untuk Chain ID ${chainId} tidak tersedia.`);
+  }
+
+  const clean = (txHash || '').trim().replace(/^0x/i, '').toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(clean)) {
+    return null;
+  }
+
+  const normalizedHash = `0x${clean}`;
+  const provider = new JsonRpcProvider(net.rpcUrl);
+  const receipt = await provider.getTransactionReceipt(normalizedHash);
+  if (!receipt) {
+    return null;
+  }
+
+  const activeContractAddress = net.contractAddress || '';
+  const matchesActiveContract = Boolean(
+    receipt.to &&
+      activeContractAddress &&
+      receipt.to.toLowerCase() === activeContractAddress.toLowerCase()
+  );
+
+  let eventName: string | undefined;
+  let tokenId: number | undefined;
+  let parentId: number | undefined;
+  let requestId: number | undefined;
+
+  for (const log of receipt.logs) {
+    try {
+      const parsed = contractInterface.parseLog({
+        topics: [...log.topics],
+        data: log.data,
+      });
+      if (!parsed) continue;
+      if (parsed.name === 'VersiDiterbitkan') {
+        eventName = 'VersiDiterbitkan';
+        tokenId = Number(parsed.args.tokenId ?? parsed.args[0]);
+        parentId = Number(parsed.args.parentId ?? parsed.args[1]);
+        break;
+      }
+      if (parsed.name === 'RestorasiDiajukan') {
+        eventName = 'RestorasiDiajukan';
+        requestId = Number(parsed.args.requestId ?? parsed.args[0]);
+        parentId = Number(parsed.args.parentId ?? parsed.args[1]);
+      }
+    } catch {
+      // Abaikan log dari kontrak/event lain
+    }
+  }
+
+  return {
+    txHash: receipt.hash,
+    status: receipt.status === 1 ? 'success' : 'reverted',
+    blockNumber: receipt.blockNumber,
+    from: receipt.from,
+    to: receipt.to,
+    gasUsed: receipt.gasUsed.toString(),
+    matchesActiveContract,
+    activeContractAddress,
+    eventName,
+    tokenId,
+    parentId,
+    requestId,
+  };
 }
 
 export async function submitRestorationRequest(
